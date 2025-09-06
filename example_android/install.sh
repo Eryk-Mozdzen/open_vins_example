@@ -79,4 +79,4 @@ echo "APK built successfully: $SIGNED_APK"
 # --- INSTALL APK ---
 adb install -r $SIGNED_APK
 
-adb logcat | grep OpenVINS
+adb logcat -T 1 | grep OpenVINS

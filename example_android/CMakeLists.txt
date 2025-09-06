@@ -15,12 +15,19 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     "${ANDROID_NDK}/sources/android/native_app_glue"
+    "${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include"
 )
 
 find_library(log log)
 find_library(android android)
+find_library(camera2ndk camera2ndk)
+find_library(nativewindow nativewindow)
+find_library(mediandk mediandk)
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
     ${log}
     ${android}
+    ${camera2ndk}
+    ${nativewindow}
+    ${mediandk}
 )
