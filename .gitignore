@@ -2,3 +2,10 @@
 .vscode
 build
 datasets
+
+*.apk
+*.apk.idsig
+staging
+compiled
+out
+temp
