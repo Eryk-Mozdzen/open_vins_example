@@ -16,7 +16,7 @@ Visualization::Visualization() {
     struct sockaddr_in server;
     server.sin_family = AF_INET;
     server.sin_port = htons(8080);
-    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server.sin_addr.s_addr = inet_addr("192.168.0.17");
 
     if(connect(sock, (struct sockaddr *)&server, sizeof(server)) == -1) {
         sock = 0;

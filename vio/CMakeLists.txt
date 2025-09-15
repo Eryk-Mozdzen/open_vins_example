@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 
+set(CMAKE_TOOLCHAIN_FILE    "../toolchain.cmake")
+set(CMAKE_PREFIX_PATH       "/install")
+
 project(vio)
 
 find_package(Boost REQUIRED COMPONENTS filesystem system)
@@ -21,7 +24,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 
     #${OPENVINS_INCLUDE_DIR}
 
-    "/usr/local/include/open_vins"
+    "/install/include/open_vins"
 )
 
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
@@ -39,5 +42,5 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     ${CERES_LIBRARIES}
     #${OPENVINS_LIBRARIES}
 
-    "/usr/local/lib/libov_msckf_lib.so"
+    "/install/lib/libov_msckf_lib.so"
 )

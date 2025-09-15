@@ -2,8 +2,7 @@
 #include <state/State.h>
 
 #include "Source.hpp"
-// #include "SourceDataset.hpp"
-#include "SourceAndroid.hpp"
+#include "SourceDataset.hpp"
 #include "Visualization.hpp"
 
 class Listener : public Source::Listener {
@@ -34,8 +33,8 @@ class Listener : public Source::Listener {
             1,
         };
         data.masks = {
-            cv::imread("../mask0.png"),
-            cv::imread("../mask1.png"),
+            cv::imread("mask0.png"),
+            cv::imread("mask1.png"),
         };
         data.images = {
             img0,
@@ -51,7 +50,7 @@ public:
 };
 
 int main() {
-    const auto parser = std::make_shared<ov_core::YamlParser>("../config.yaml");
+    const auto parser = std::make_shared<ov_core::YamlParser>("./config.yaml");
 
     ov_msckf::VioManagerOptions params;
     params.print_and_load(parser);
@@ -60,13 +59,12 @@ int main() {
 
     Listener listener(vio);
 
-    // SourceDataset source(&listener, "../datasets/dataset-corridor1_512_16");
-    SourceAndroid source(&listener);
+    SourceDataset source(&listener, "datasets/dataset-corridor1_512_16");
 
     Visualization visualization;
 
     while(true) {
-        double timestamp;
+        /*double timestamp;
         cv::Mat window;
 
         vio->get_active_image(timestamp, window);
@@ -74,7 +72,7 @@ int main() {
         if((window.size().width > 0) && (window.size().height > 0)) {
             cv::imshow("window", window);
             cv::waitKey(1);
-        }
+        }*/
 
         const auto q = vio->get_state()->_imu->quat();
         const auto p = vio->get_state()->_imu->pos();
