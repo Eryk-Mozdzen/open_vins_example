@@ -9,7 +9,6 @@ find_package(Boost REQUIRED COMPONENTS filesystem system)
 find_package(Ceres REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
-#find_package(OpenVINS REQUIRED)
 
 add_executable(${CMAKE_PROJECT_NAME}
     "src/main.cpp"
@@ -21,26 +20,18 @@ add_executable(${CMAKE_PROJECT_NAME}
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     "include"
-
-    #${OPENVINS_INCLUDE_DIR}
-
     "/install/include/open_vins"
 )
 
 target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
-    #-O3
-    #-Wall
-    #-Wextra
-    #-Wpedantic
+    -O3
 )
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     Boost::filesystem
     Boost::system
     Eigen3::Eigen
-    ${OpenCV_LIBS}
+    ${OpenCV_LIBRARIES}
     ${CERES_LIBRARIES}
-    #${OPENVINS_LIBRARIES}
-
     "/install/lib/libov_msckf_lib.so"
 )

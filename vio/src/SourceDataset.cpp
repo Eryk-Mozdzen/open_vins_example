@@ -5,8 +5,8 @@
 #include "SourceDataset.hpp"
 
 SourceDataset::SourceDataset(Source::Listener *listener, const std::string path)
-    : path{path},
-      Source(listener),
+    : Source(listener),
+      path{path},
       threadIMU(&SourceDataset::readIMU, this),
       threadCAM(&SourceDataset::readCAM, this) {
 }

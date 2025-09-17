@@ -12,6 +12,8 @@ RUN apt-get update \
 RUN wget https://developer.arm.com/-/media/Files/downloads/gnu/12.2.rel1/binrel/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-linux-gnu.tar.xz \
     && tar -xf arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-linux-gnu.tar.xz
 
+ENV PATH="$PATH:/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-linux-gnu/bin"
+
 RUN mkdir -p /install
 
 COPY toolchain.cmake /toolchain.cmake
@@ -104,3 +106,13 @@ RUN git clone --depth 1 --branch v2.7 --recursive https://github.com/rpng/open_v
         -DENABLE_ARUCO_TAGS=OFF \
     && make -j4 \
     && make install
+
+RUN git clone --depth=1 --branch rpi-6.12.y --recursive https://github.com/raspberrypi/linux.git \
+    && cd linux \
+    && apt-get install -y \
+        flex \
+        bison \
+        bc \
+        libssl-dev \
+    && make -j4 ARCH=arm64 CROSS_COMPILE=aarch64-none-linux-gnu- bcm2712_defconfig \
+    && make -j4 ARCH=arm64 CROSS_COMPILE=aarch64-none-linux-gnu- modules

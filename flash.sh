@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rsync -avz \
+rsync -avz --delete \
     install \
     vio/build/vio \
     vio/config.yaml \
