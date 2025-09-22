@@ -2,6 +2,7 @@
 
 rsync -avz --delete \
     install \
+    mpu6050/mpu6050.ko \
     vio/build/vio \
     vio/config.yaml \
     vio/imu.yaml \

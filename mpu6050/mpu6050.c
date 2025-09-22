@@ -1,254 +1,254 @@
-#include <linux/fs.h>
-#include <linux/gpio/consumer.h>
+#include <linux/delay.h>
+#include <linux/gpio.h>
 #include <linux/i2c.h>
 #include <linux/init.h>
-#include <linux/interrupt.h>
-#include <linux/kernel.h>
 #include <linux/kfifo.h>
+#include <linux/ktime.h>
 #include <linux/miscdevice.h>
 #include <linux/module.h>
-#include <linux/poll.h>
-#include <linux/slab.h>
-#include <linux/timekeeping.h>
-#include <linux/uaccess.h>
-#include <linux/wait.h>
 
-#define MPU6050_ADDR          0x68
-#define MPU6050_REG_ACCEL_OUT 0x3B
-#define MPU6050_SAMPLE_BYTES  14
-#define FIFO_MAX_SAMPLES      1024
+#include "mpu6050.h"
+
+#define GPIO_INT  586
+#define FIFO_SIZE 1024
 
 typedef struct {
-    ktime_t timestamp;
-    int16_t accel[3];
-    int16_t temperature;
+    int64_t timestamp;
     int16_t gyro[3];
-} mpu6050_sample_t;
+    int16_t accel[3];
+    uint8_t _padding[4];
+} sample_t;
 
 typedef struct {
+    struct i2c_adapter *adapter;
     struct i2c_client *client;
-    struct gpio_desc *irq_gpiod;
     int irq;
     struct kfifo fifo;
-    wait_queue_head_t readq;
+    spinlock_t lock;
     struct miscdevice miscdev;
-    struct mutex lock;
-} mpu6050_t;
+} device_t;
 
-static irqreturn_t mpu6050_interrupt(int irq, void *user) {
+static void reg_write(struct i2c_client *client, const uint8_t reg, const uint8_t value) {
+    if(i2c_smbus_write_byte_data(client, reg, value) < 0) {
+        dev_err(&client->dev, "mpu6050: failed to write 0x%02X to reg 0x%02X\n", value, reg);
+    }
+}
+
+static irqreturn_t isr_drdy(int irq, void *dev_id) {
     (void)irq;
 
-    mpu6050_t *mpu6050 = user;
-    uint8_t data[MPU6050_SAMPLE_BYTES];
+    device_t *device = dev_id;
 
-    mutex_lock(&mpu6050->lock);
-    const int ret = i2c_smbus_read_i2c_block_data(mpu6050->client, MPU6050_REG_ACCEL_OUT,
-                                                  MPU6050_SAMPLE_BYTES, data);
-    mutex_unlock(&mpu6050->lock);
+    uint8_t buffer[14];
+    int ret;
 
+    ret = i2c_smbus_read_i2c_block_data(device->client, MPU6050_REG_ACCEL_XOUT_H, 14, buffer);
     if(ret < 0) {
-        dev_err(&mpu6050->client->dev, "I2C read failed: %d\n", ret);
+        dev_err(&device->client->dev, "I2C read failed: %d\n", ret);
         return IRQ_HANDLED;
     }
 
-    const mpu6050_sample_t sample = {
-        .timestamp = ktime_get(),
-        .accel[0] = (data[0] << 8) | data[1],
-        .accel[1] = (data[2] << 8) | data[3],
-        .accel[2] = (data[4] << 8) | data[5],
-        .temperature = (data[6] << 8) | data[7],
-        .gyro[0] = (data[8] << 8) | data[9],
-        .gyro[1] = (data[10] << 8) | data[11],
-        .gyro[2] = (data[12] << 8) | data[13],
+    const sample_t sample = {
+        .timestamp = ktime_to_ns(ktime_get()),
+        .gyro[0] = (((int16_t)buffer[8]) << 8) | buffer[9],
+        .gyro[1] = (((int16_t)buffer[10]) << 8) | buffer[11],
+        .gyro[2] = (((int16_t)buffer[12]) << 8) | buffer[13],
+        .accel[0] = (((int16_t)buffer[0]) << 8) | buffer[1],
+        .accel[1] = (((int16_t)buffer[2]) << 8) | buffer[3],
+        .accel[2] = (((int16_t)buffer[4]) << 8) | buffer[5],
     };
 
-    if(!kfifo_is_full(&mpu6050->fifo)) {
-        kfifo_in(&mpu6050->fifo, &sample, sizeof(sample));
-        wake_up_interruptible(&mpu6050->readq);
-    } else {
-        dev_warn(&mpu6050->client->dev, "FIFO full, dropping sample\n");
+    unsigned long flags;
+    spin_lock_irqsave(&device->lock, flags);
+    if(!kfifo_is_full(&device->fifo)) {
+        kfifo_in(&device->fifo, &sample, sizeof(sample));
     }
+    spin_unlock_irqrestore(&device->lock, flags);
 
     return IRQ_HANDLED;
 }
 
-static irqreturn_t mpu_irq_top(int irq, void *user) {
-    return IRQ_WAKE_THREAD;
-}
-
-static ssize_t mpu6050_read(struct file *file, char __user *buf, size_t count, loff_t *ppos) {
-    mpu6050_t *mpu6050 = container_of(file->private_data, mpu6050_t, miscdev);
-    size_t avail;
-    size_t to_copy;
+static int i2c_probe(struct i2c_client *client) {
     int ret;
 
-    if(count % sizeof(mpu6050_sample_t)) {
-        return -EINVAL;
-    }
+    device_t *device = i2c_get_clientdata(client);
 
-    if(kfifo_is_empty(&mpu6050->fifo)) {
-        if(file->f_flags & O_NONBLOCK) {
-            return -EAGAIN;
-        }
-
-        if(wait_event_interruptible(mpu6050->readq, !kfifo_is_empty(&mpu6050->fifo))) {
-            return -ERESTARTSYS;
-        }
-    }
-
-    avail = kfifo_len(&mpu6050->fifo);
-    to_copy = min(avail, count);
-
-    void *kbuf = kmalloc(to_copy, GFP_KERNEL);
-    if(!kbuf) {
-        return -ENOMEM;
-    }
-
-    ret = kfifo_out(&mpu6050->fifo, kbuf, to_copy);
-    if(ret != (int)to_copy) {
-        kfree(kbuf);
-        return -EIO;
-    }
-
-    if(copy_to_user(buf, kbuf, to_copy)) {
-        kfree(kbuf);
-        return -EFAULT;
-    }
-
-    kfree(kbuf);
-
-    return to_copy;
-}
-
-static unsigned int mpu6050_poll(struct file *file, poll_table *wait) {
-    mpu6050_t *mpu6050 = container_of(file->private_data, mpu6050_t, miscdev);
-
-    unsigned int mask = 0;
-    poll_wait(file, &mpu6050->readq, wait);
-
-    if(!kfifo_is_empty(&mpu6050->fifo)) {
-        mask |= POLLIN | POLLRDNORM;
-    }
-
-    return mask;
-}
-
-static const struct file_operations mpu6050_fops = {
-    .owner = THIS_MODULE,
-    .read = mpu6050_read,
-    .poll = mpu6050_poll,
-};
-
-static int mpu6050_probe(struct i2c_client *client) {
-    dev_info(&client->dev, "probing MPU6050\n");
-
-    int ret;
-    mpu6050_t *mpu6050;
-
-    mpu6050 = devm_kzalloc(&client->dev, sizeof(*mpu6050), GFP_KERNEL);
-    if(!mpu6050) {
-        return -ENOMEM;
-    }
-
-    i2c_set_clientdata(client, mpu6050);
-    mpu6050->client = client;
-    mutex_init(&mpu6050->lock);
-    init_waitqueue_head(&mpu6050->readq);
-
-    ret = kfifo_alloc(&mpu6050->fifo, FIFO_MAX_SAMPLES * sizeof(mpu6050_sample_t), GFP_KERNEL);
+    ret = gpio_request(GPIO_INT, "mpu6050_irq");
     if(ret) {
-        dev_err(&client->dev, "kfifo_alloc failed\n");
-        return -ENOMEM;
+        dev_err(&client->dev, "failed to request GPIO: %d\n", ret);
+        return ret;
     }
 
-    mpu6050->irq_gpiod = devm_gpiod_get_optional(&client->dev, "irq", GPIOD_IN);
-    if(IS_ERR(&mpu6050->irq_gpiod)) {
-        dev_err(&client->dev, "failed to get irq gpio\n");
-        ret = PTR_ERR(mpu6050->irq_gpiod);
-        goto err_fifo;
-    }
-
-    if(mpu6050->irq_gpiod) {
-        mpu6050->irq = gpiod_to_irq(mpu6050->irq_gpiod);
-        if(mpu6050->irq < 0) {
-            dev_err(&client->dev, "gpiod_to_irq failed\n");
-            ret = mpu6050->irq;
-            goto err_fifo;
-        }
-
-        ret =
-            devm_request_threaded_irq(&client->dev, mpu6050->irq, mpu_irq_top, mpu6050_interrupt,
-                                      IRQF_TRIGGER_FALLING | IRQF_ONESHOT, "MPU6050 IRQ", mpu6050);
-        if(ret) {
-            dev_err(&client->dev, "request_threaded_irq failed: %d\n", ret);
-            goto err_fifo;
-        }
-    } else {
-        dev_warn(&client->dev, "no irq gpio configured; falling back to polling\n");
-    }
-
-    mutex_lock(&mpu6050->lock);
-    ret = i2c_smbus_write_byte_data(client, 0x6B, 0x00);
-    mutex_unlock(&mpu6050->lock);
+    ret = gpio_direction_input(GPIO_INT);
     if(ret) {
-        dev_warn(&client->dev, "failed to wake MPU6050: %d\n", ret);
+        dev_err(&client->dev, "failed to set GPIO direction\n");
+        gpio_free(GPIO_INT);
+        return ret;
     }
 
-    mpu6050->miscdev.minor = MISC_DYNAMIC_MINOR;
-    mpu6050->miscdev.name = "mpu6050";
-    mpu6050->miscdev.fops = &mpu6050_fops;
-    mpu6050->miscdev.parent = &client->dev;
-    ret = misc_register(&mpu6050->miscdev);
+    ret = gpio_to_irq(GPIO_INT);
+    if(ret < 0) {
+        dev_err(&client->dev, "failed to obtain IRQ: %d\n", ret);
+        gpio_free(GPIO_INT);
+        return ret;
+    }
+    device->irq = ret;
+
+    ret = devm_request_threaded_irq(&client->dev, device->irq, NULL, isr_drdy,
+                                    IRQF_TRIGGER_RISING | IRQF_ONESHOT, "mpu6050_irq", device);
     if(ret) {
-        dev_err(&client->dev, "misc_register failed: %d\n", ret);
-        goto err_fifo;
+        dev_err(&client->dev, "failed to request IRQ: %d\n", ret);
+        gpio_free(GPIO_INT);
+        return ret;
     }
 
-    dev_info(&client->dev, "MPU6050 driver loaded; char device /dev/%s\n", mpu6050->miscdev.name);
+    reg_write(device->client, MPU6050_REG_PWR_MGMT_1, MPU6050_PWR_MGMT_1_DEVICE_RESET);
+    mdelay(10);
+    reg_write(device->client, MPU6050_REG_SIGNAL_PATH_RESET,
+              MPU6050_SIGNAL_PATH_RESET_GYRO | MPU6050_SIGNAL_PATH_RESET_ACCEL |
+                  MPU6050_SIGNAL_PATH_RESET_TEMP);
+    mdelay(10);
+    reg_write(device->client, MPU6050_REG_INT_ENABLE,
+              MPU6050_INT_ENABLE_FIFO_OVERLOW_DISABLE | MPU6050_INT_ENABLE_I2C_MST_INT_DISABLE |
+                  MPU6050_INT_ENABLE_DATA_RDY_ENABLE);
+    reg_write(device->client, MPU6050_REG_INT_PIN_CFG,
+              MPU6050_INT_PIN_CFG_LEVEL_ACTIVE_HIGH | MPU6050_INT_PIN_CFG_PUSH_PULL |
+                  MPU6050_INT_PIN_CFG_PULSE | MPU6050_INT_PIN_CFG_STATUS_CLEAR_AFTER_ANY |
+                  MPU6050_INT_PIN_CFG_FSYNC_DISABLE | MPU6050_INT_PIN_CFG_I2C_BYPASS_DISABLE);
+    reg_write(device->client, MPU6050_REG_PWR_MGMT_1,
+              MPU6050_PWR_MGMT_1_TEMP_DIS | MPU6050_PWR_MGMT_1_CLOCK_GYRO_X);
+    reg_write(device->client, MPU6050_REG_CONFIG,
+              MPU6050_CONFIG_EXT_SYNC_DISABLED | MPU6050_CONFIG_DLPF_SETTING_1);
+    reg_write(device->client, MPU6050_REG_ACCEL_CONFIG, MPU6050_ACCEL_CONFIG_RANGE_4G);
+    reg_write(device->client, MPU6050_REG_GYRO_CONFIG, MPU6050_GYRO_CONFIG_RANGE_500DPS);
+    reg_write(device->client, MPU6050_REG_SMPLRT_DIV, 4);
 
+    dev_info(&client->dev, "started\n");
     return 0;
-
-err_fifo:
-    kfifo_free(&mpu6050->fifo);
-    return ret;
 }
 
-static void mpu6050_remove(struct i2c_client *client) {
-    mpu6050_t *mpu6050 = i2c_get_clientdata(client);
+static void i2c_remove(struct i2c_client *client) {
+    (void)client;
 
-    misc_deregister(&mpu6050->miscdev);
-    kfifo_free(&mpu6050->fifo);
-
-    dev_info(&client->dev, "MPU6050 driver removed\n");
+    gpio_free(GPIO_INT);
 }
 
-static const struct of_device_id mpu6050_match[] = {
-    {
-     .compatible = "invensense,mpu6050",
-     },
-    {},
-};
-MODULE_DEVICE_TABLE(of, mpu6050_match);
-
-static const struct i2c_device_id mpu6050_id[] = {
+static const struct i2c_device_id i2c_ids[] = {
     {"mpu6050", 0},
-    {},
+    {}
 };
-MODULE_DEVICE_TABLE(i2c, mpu6050_id);
 
-static struct i2c_driver mpu6050_i2c_driver = {
+static struct i2c_driver i2c_driver = {
     .driver =
         {
                  .name = "mpu6050",
-                 .of_match_table = of_match_ptr(mpu6050_match),
                  },
-    .probe = mpu6050_probe,
-    .remove = mpu6050_remove,
-    .id_table = mpu6050_id,
+    .probe = i2c_probe,
+    .remove = i2c_remove,
+    .id_table = i2c_ids,
 };
 
-module_i2c_driver(mpu6050_i2c_driver);
+static device_t device;
 
+static ssize_t fops_read(struct file *file, char __user *buf, size_t count, loff_t *ppos) {
+    (void)file;
+    (void)ppos;
+
+    int ret;
+
+    if(count < sizeof(sample_t)) {
+        return -EINVAL;
+    }
+
+    sample_t sample;
+    unsigned long flags;
+    spin_lock_irqsave(&device.lock, flags);
+    if(!kfifo_is_empty(&device.fifo)) {
+        ret = kfifo_out(&device.fifo, &sample, sizeof(sample));
+    } else {
+        ret = 0;
+    }
+    spin_unlock_irqrestore(&device.lock, flags);
+
+    if(ret == 0) {
+        return 0;
+    }
+
+    if(copy_to_user(buf, &sample, sizeof(sample))) {
+        return -EFAULT;
+    }
+
+    return sizeof(sample);
+}
+
+static const struct file_operations fops = {
+    .owner = THIS_MODULE,
+    .read = fops_read,
+};
+
+static int mod_init(void) {
+    int ret;
+
+    spin_lock_init(&device.lock);
+
+    device.miscdev.fops = &fops;
+    device.miscdev.minor = MISC_DYNAMIC_MINOR;
+    device.miscdev.name = "mpu6050";
+    ret = misc_register(&device.miscdev);
+    if(ret) {
+        pr_err("mpu6050: failed to register miscdev: %d\n", ret);
+        return ret;
+    }
+
+    ret = kfifo_alloc(&device.fifo, FIFO_SIZE, GFP_KERNEL);
+    if(ret) {
+        pr_err("mpu6050: failed to allocate FIFO: %d\n", ret);
+        return ret;
+    }
+
+    device.adapter = i2c_get_adapter(1);
+    if(!device.adapter) {
+        pr_err("mpu6050: failed to get I2C adapter\n");
+        return -ENODEV;
+    }
+
+    struct i2c_board_info info = {
+        I2C_BOARD_INFO("mpu6050", 0x68),
+    };
+
+    device.client = i2c_new_client_device(device.adapter, &info);
+    if(IS_ERR(device.client)) {
+        pr_err("mpu6050: failed to create client device\n");
+        i2c_put_adapter(device.adapter);
+        return PTR_ERR(device.client);
+    }
+
+    i2c_set_clientdata(device.client, &device);
+
+    return i2c_add_driver(&i2c_driver);
+}
+
+static void mod_exit(void) {
+    misc_deregister(&device.miscdev);
+    kfifo_free(&device.fifo);
+
+    i2c_del_driver(&i2c_driver);
+
+    if(device.client) {
+        i2c_unregister_device(device.client);
+    }
+
+    if(device.adapter) {
+        i2c_put_adapter(device.adapter);
+    }
+
+    pr_info("mpu6050: exit\n");
+}
+
+module_init(mod_init);
+module_exit(mod_exit);
+
+MODULE_DEVICE_TABLE(i2c, i2c_ids);
+MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("MPU6050 device driver");
 MODULE_AUTHOR("Eryk Możdżeń");
-MODULE_DESCRIPTION("MPU6050 I2C+IRQ driver");
-MODULE_LICENSE("GPL v2");

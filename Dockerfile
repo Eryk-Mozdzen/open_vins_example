@@ -107,8 +107,9 @@ RUN git clone --depth 1 --branch v2.7 --recursive https://github.com/rpng/open_v
     && make -j4 \
     && make install
 
-RUN git clone --depth=1 --branch rpi-6.12.y --recursive https://github.com/raspberrypi/linux.git \
+RUN git clone --branch rpi-6.12.y --recursive https://github.com/raspberrypi/linux.git \
     && cd linux \
+    && git checkout d15beabc10d96912464f4b8d0717ff95dc53b01e \
     && apt-get install -y \
         flex \
         bison \
