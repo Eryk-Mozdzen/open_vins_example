@@ -1,13 +1,11 @@
 
-MODULE := mpu6050
-KERNEL_SRC := /linux
+KERNEL_SRC := /lib/modules/$(shell uname -r)/build
 ARCH := arm64
-CROSS_COMPILE := aarch64-none-linux-gnu-
 
-obj-m := $(MODULE).o
+obj-m := mpu6050.o
 
 all:
-	$(MAKE) -C $(KERNEL_SRC) M=$(PWD) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules
+	$(MAKE) -C $(KERNEL_SRC) M=$(PWD) ARCH=$(ARCH) modules
 
 clean:
 	$(MAKE) -C $(KERNEL_SRC) M=$(PWD) clean

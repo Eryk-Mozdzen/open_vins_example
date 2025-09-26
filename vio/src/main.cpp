@@ -2,7 +2,8 @@
 #include <state/State.h>
 
 #include "Source.hpp"
-#include "SourceDataset.hpp"
+// #include "SourceDataset.hpp"
+#include "SourceSensor.hpp"
 #include "Visualization.hpp"
 
 class Listener : public Source::Listener {
@@ -10,7 +11,6 @@ class Listener : public Source::Listener {
 
     void available(const Source::IMU &sample) override {
         ov_core::ImuData data;
-
         data.timestamp = sample.timestamp * 1E-9;
         data.wm = Eigen::Vector3d(sample.gyro[0], sample.gyro[1], sample.gyro[2]);
         data.am = Eigen::Vector3d(sample.accel[0], sample.accel[1], sample.accel[2]);
@@ -19,27 +19,16 @@ class Listener : public Source::Listener {
     }
 
     void available(const Source::CAM &sample) override {
-        cv::Mat img0;
-        cv::Mat img1;
+        printf("%20lld\n", (long long)sample.timestamp);
 
+        cv::Mat img0;
         cv::cvtColor(sample.img0, img0, cv::COLOR_BGR2GRAY);
-        cv::cvtColor(sample.img1, img1, cv::COLOR_BGR2GRAY);
 
         ov_core::CameraData data;
-
         data.timestamp = sample.timestamp * 1E-9;
-        data.sensor_ids = {
-            0,
-            1,
-        };
-        data.masks = {
-            cv::imread("mask0.png"),
-            cv::imread("mask1.png"),
-        };
-        data.images = {
-            img0,
-            img1,
-        };
+        data.sensor_ids = {0};
+        data.masks = {cv::Mat(640, 480, CV_8UC1, cv::Scalar(0))};
+        data.images = {img0};
 
         vio->feed_measurement_camera(data);
     }
@@ -59,7 +48,8 @@ int main() {
 
     Listener listener(vio);
 
-    SourceDataset source(&listener, "datasets/dataset-corridor1_512_16");
+    // SourceDataset source(&listener, "datasets/dataset-corridor1_512_16");
+    SourceSensor source(&listener);
 
     Visualization visualization;
 

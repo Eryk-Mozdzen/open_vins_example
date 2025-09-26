@@ -4,8 +4,8 @@ verbosity: "INFO"
 
 use_fej: true
 integration: "rk4"
-use_stereo: true
-max_cameras: 2
+use_stereo: false
+max_cameras: 1
 
 calib_cam_extrinsics: true
 calib_cam_intrinsics: true
@@ -82,9 +82,7 @@ up_slam_chi2_multipler: 1
 up_aruco_sigma_px: 1
 up_aruco_chi2_multipler: 1
 
-use_mask: true
-mask0: "mask0.png"
-mask1: "mask1.png"
+use_mask: false
 
 relative_config_imu: "imu.yaml"
 relative_config_imucam: "imucam.yaml"
