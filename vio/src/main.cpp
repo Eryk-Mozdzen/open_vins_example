@@ -39,7 +39,7 @@ public:
 };
 
 int main() {
-    const auto parser = std::make_shared<ov_core::YamlParser>("./config.yaml");
+    const auto parser = std::make_shared<ov_core::YamlParser>("../config.yaml");
 
     ov_msckf::VioManagerOptions params;
     params.print_and_load(parser);

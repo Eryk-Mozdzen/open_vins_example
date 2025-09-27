@@ -51,41 +51,49 @@ void SourceSensor::readIMU() {
 }
 
 void SourceSensor::readCAM() {
-    libcamera::CameraManager cm;
-    cm.start();
+    std::unique_ptr<libcamera::CameraManager> cm = std::make_unique<libcamera::CameraManager>();
+    cm->start();
 
-    if(cm.cameras().empty()) {
+    if(cm->cameras().empty()) {
+        cm->stop();
         std::cerr << "No cameras found" << std::endl;
         return;
     }
 
-    auto cam = cm.cameras()[0];
-    cam->acquire();
+    for(auto const &camera : cm->cameras()) {
+        std::cout << camera->id() << std::endl;
+    }
 
-    auto config = cam->generateConfiguration({libcamera::StreamRole::Viewfinder});
+    auto camera = cm->get(cm->cameras()[0]->id());
+    camera->acquire();
+
+    auto config = camera->generateConfiguration({libcamera::StreamRole::Viewfinder});
     config->at(0).pixelFormat = libcamera::formats::YUV420;
     config->at(0).size = {640, 480};
     config->at(0).bufferCount = 4;
-    cam->configure(config.get());
+    camera->configure(config.get());
 
-    libcamera::FrameBufferAllocator allocator(cam);
+    libcamera::FrameBufferAllocator allocator(camera);
     for(auto &cfg : *config) {
         if(allocator.allocate(cfg.stream()) < 0) {
+            camera->release();
+            camera.reset();
+            cm->stop();
             std::cerr << "Failed to allocate buffers" << std::endl;
             return;
         }
     }
 
-    cam->start();
+    camera->start();
 
     while(true) {
-        auto request = cam->createRequest();
+        auto request = camera->createRequest();
         auto &stream = config->at(0).stream();
         const auto &buffers = allocator.buffers(stream);
         request->addBuffer(stream, buffers[0].get());
 
-        cam->queueRequest(request.get());
-        request = cam->waitForRequest();
+        camera->queueRequest(request.get());
+        request = camera->waitForRequest();
         if(!request) {
             continue;
         }
@@ -110,4 +118,9 @@ void SourceSensor::readCAM() {
         munmap(yPlane, buf[0].length);
         munmap(uvPlane, buf[1].length);
     }
+
+    camera->stop();
+    camera->release();
+    camera.reset();
+    cm->stop();
 }
