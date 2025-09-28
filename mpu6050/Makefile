@@ -1,11 +1,11 @@
-
-KERNEL_SRC := /lib/modules/$(shell uname -r)/build
+MODULE := mpu6050
+KERNEL := /lib/modules/$(shell uname -r)/build
 ARCH := arm64
 
-obj-m := mpu6050.o
+obj-m := $(MODULE).o
 
 all:
-	$(MAKE) -C $(KERNEL_SRC) M=$(PWD) ARCH=$(ARCH) modules
+	$(MAKE) -C $(KERNEL) M=$(PWD) ARCH=$(ARCH) modules
 
 clean:
-	$(MAKE) -C $(KERNEL_SRC) M=$(PWD) clean
+	$(MAKE) -C $(KERNEL) M=$(PWD) clean

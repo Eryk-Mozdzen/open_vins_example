@@ -58,10 +58,13 @@ void SourceDataset::readCAM() {
         std::getline(ss, timestamp, ',');
         std::getline(ss, filename);
 
+        cv::Mat img0 = cv::imread(path + "/mav0/cam0/data/" + filename);
+        cv::Mat img1 = cv::imread(path + "/mav0/cam1/data/" + filename);
+
         Source::CAM sample;
         sample.timestamp = std::stoul(timestamp);
-        sample.img0 = cv::imread(path + "/mav0/cam0/data/" + filename);
-        sample.img1 = cv::imread(path + "/mav0/cam1/data/" + filename);
+        cv::cvtColor(img0, sample.img0, cv::COLOR_BGR2GRAY);
+        cv::cvtColor(img1, sample.img1, cv::COLOR_BGR2GRAY);
 
         listener->available(sample);
 

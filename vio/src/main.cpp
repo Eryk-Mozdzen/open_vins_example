@@ -19,16 +19,11 @@ class Listener : public Source::Listener {
     }
 
     void available(const Source::CAM &sample) override {
-        printf("%20lld\n", (long long)sample.timestamp);
-
-        cv::Mat img0;
-        cv::cvtColor(sample.img0, img0, cv::COLOR_BGR2GRAY);
-
         ov_core::CameraData data;
         data.timestamp = sample.timestamp * 1E-9;
         data.sensor_ids = {0};
-        data.masks = {cv::Mat(640, 480, CV_8UC1, cv::Scalar(0))};
-        data.images = {img0};
+        data.masks = {cv::Mat(480, 640, CV_8UC1, cv::Scalar(0))};
+        data.images = {sample.img0};
 
         vio->feed_measurement_camera(data);
     }
@@ -51,10 +46,10 @@ int main() {
     // SourceDataset source(&listener, "datasets/dataset-corridor1_512_16");
     SourceSensor source(&listener);
 
-    Visualization visualization;
+    // Visualization visualization;
 
     while(true) {
-        /*double timestamp;
+        double timestamp;
         cv::Mat window;
 
         vio->get_active_image(timestamp, window);
@@ -62,13 +57,13 @@ int main() {
         if((window.size().width > 0) && (window.size().height > 0)) {
             cv::imshow("window", window);
             cv::waitKey(1);
-        }*/
+        }
 
-        const auto q = vio->get_state()->_imu->quat();
+        /*const auto q = vio->get_state()->_imu->quat();
         const auto p = vio->get_state()->_imu->pos();
 
-        visualization.update(q.data(), p.data());
+        visualization.update(q.data(), p.data());*/
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }

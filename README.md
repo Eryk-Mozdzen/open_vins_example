@@ -1,5 +1,7 @@
 # OpenVINS example project
 
+### Prerequisites
+
 ```bash
 sudo apt install -y \
     build-essential \
@@ -15,11 +17,26 @@ sudo apt install -y \
     libcamera-dev
 ```
 
+### Camera
+
 ```bash
 sudo nano /boot/firmware/config.txt
 # camera_auto_detect=0
 # dtoverlay=ov5647,cam0   add to [all] section
 ```
+
+### IMU
+
+```bash
+sudo raspi-config
+# Interface Options > I2C > Enable
+
+cd mpu6050 \
+    && make \
+    && sudo insmmod mpu6050.ko
+```
+
+### OpenVINS
 
 ```bash
 git clone --depth 1 --branch v2.7 https://github.com/rpng/open_vins.git \

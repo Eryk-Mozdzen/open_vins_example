@@ -60,17 +60,15 @@ void SourceSensor::readCAM() {
         return;
     }
 
-    for(auto const &camera : cm->cameras()) {
-        std::cout << camera->id() << std::endl;
-    }
-
-    auto camera = cm->get(cm->cameras()[0]->id());
+    camera = cm->get(cm->cameras()[0]->id());
     camera->acquire();
 
     auto config = camera->generateConfiguration({libcamera::StreamRole::Viewfinder});
     config->at(0).pixelFormat = libcamera::formats::YUV420;
-    config->at(0).size = {640, 480};
+    config->at(0).size.width = 640;
+    config->at(0).size.height = 480;
     config->at(0).bufferCount = 4;
+    config->validate();
     camera->configure(config.get());
 
     libcamera::FrameBufferAllocator allocator(camera);
@@ -85,42 +83,43 @@ void SourceSensor::readCAM() {
     }
 
     camera->start();
+    camera->requestCompleted.connect(this, &SourceSensor::readyCAM);
 
-    while(true) {
-        auto request = camera->createRequest();
-        auto &stream = config->at(0).stream();
-        const auto &buffers = allocator.buffers(stream);
+    auto request = camera->createRequest();
+    for(auto &streamConfig : *config) {
+        auto stream = streamConfig.stream();
+        auto &buffers = allocator.buffers(stream);
         request->addBuffer(stream, buffers[0].get());
-
-        camera->queueRequest(request.get());
-        request = camera->waitForRequest();
-        if(!request) {
-            continue;
-        }
-
-        auto &buf = request->buffers().begin()->second->planes();
-
-        uint8_t *yPlane = static_cast<uint8_t *>(
-            mmap(nullptr, buf[0].length, PROT_READ | PROT_WRITE, MAP_SHARED, buf[0].fd.get(), 0));
-        uint8_t *uvPlane = static_cast<uint8_t *>(
-            mmap(nullptr, buf[1].length, PROT_READ | PROT_WRITE, MAP_SHARED, buf[1].fd.get(), 0));
-
-        cv::Mat yuv(480 + 480 / 2, 640, CV_8UC1);
-        memcpy(yuv.data, yPlane, buf[0].length);
-        memcpy(yuv.data + 640 * 480, uvPlane, buf[1].length);
-
-        Source::CAM sample;
-        sample.timestamp = request->metadata().timestamp;
-        cv::cvtColor(yuv, sample.img0, cv::COLOR_YUV2BGR_I420);
-
-        listener->available(sample);
-
-        munmap(yPlane, buf[0].length);
-        munmap(uvPlane, buf[1].length);
     }
 
-    camera->stop();
-    camera->release();
-    camera.reset();
-    cm->stop();
+    camera->queueRequest(request.get());
+
+    while(true) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+}
+
+void SourceSensor::readyCAM(libcamera::Request *request) {
+    if(request->status() == libcamera::Request::RequestCancelled) {
+        return;
+    }
+
+    Source::CAM sample;
+
+    sample.timestamp = request->metadata().get(libcamera::controls::SensorTimestamp).value_or(0);
+
+    for(auto &[stream, buffer] : request->buffers()) {
+        const auto &plane = buffer->planes().front();
+        void *data = mmap(nullptr, plane.length, PROT_READ, MAP_SHARED, plane.fd.get(), 0);
+
+        const cv::Mat gray(480, 640, CV_8UC1, data);
+        sample.img0 = gray.clone();
+
+        munmap(data, plane.length);
+    }
+
+    listener->available(sample);
+
+    request->reuse(libcamera::Request::ReuseBuffers);
+    camera->queueRequest(request);
 }
