@@ -1,12 +1,12 @@
-#ifndef SOURCE_SENSOR_HPP
-#define SOURCE_SENSOR_HPP
+#ifndef SOURCE_HARDWARE_HPP
+#define SOURCE_HARDWARE_HPP
 
 #include <libcamera/libcamera.h>
 #include <thread>
 
 #include "Source.hpp"
 
-class SourceSensor : public Source {
+class SourceHardware : public Source {
     std::thread threadIMU;
     std::thread threadCAM;
     std::shared_ptr<libcamera::Camera> camera;
@@ -16,7 +16,7 @@ class SourceSensor : public Source {
     void readyCAM(libcamera::Request *request);
 
 public:
-    SourceSensor(Source::Listener *listener);
+    SourceHardware(Source::Listener *listener);
 };
 
 #endif

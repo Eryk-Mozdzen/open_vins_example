@@ -13,7 +13,7 @@ add_executable(${CMAKE_PROJECT_NAME}
     "src/main.cpp"
     "src/Source.cpp"
     "src/SourceDataset.cpp"
-    "src/SourceSensor.cpp"
+    "src/SourceHardware.cpp"
     "src/Visualization.cpp"
 )
 

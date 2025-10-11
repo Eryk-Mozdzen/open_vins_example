@@ -5,7 +5,7 @@
 #include <thread>
 #include <unistd.h>
 
-#include "SourceSensor.hpp"
+#include "SourceHardware.hpp"
 
 struct MPU6050 {
     int64_t timestamp;
@@ -14,13 +14,13 @@ struct MPU6050 {
     uint8_t _padding[4];
 };
 
-SourceSensor::SourceSensor(Source::Listener *listener)
+SourceHardware::SourceHardware(Source::Listener *listener)
     : Source(listener),
-      threadIMU(&SourceSensor::readIMU, this),
-      threadCAM(&SourceSensor::readCAM, this) {
+      threadIMU(&SourceHardware::readIMU, this),
+      threadCAM(&SourceHardware::readCAM, this) {
 }
 
-void SourceSensor::readIMU() {
+void SourceHardware::readIMU() {
     const int fd = open("/dev/mpu6050", O_RDONLY | O_NONBLOCK);
     if(fd < 0) {
         std::cerr << "Device /dev/mpu6050 not found" << std::endl;
@@ -50,7 +50,7 @@ void SourceSensor::readIMU() {
     }
 }
 
-void SourceSensor::readCAM() {
+void SourceHardware::readCAM() {
     std::unique_ptr<libcamera::CameraManager> cm = std::make_unique<libcamera::CameraManager>();
     cm->start();
 
@@ -83,7 +83,7 @@ void SourceSensor::readCAM() {
     }
 
     camera->start();
-    camera->requestCompleted.connect(this, &SourceSensor::readyCAM);
+    camera->requestCompleted.connect(this, &SourceHardware::readyCAM);
 
     auto request = camera->createRequest();
     for(auto &streamConfig : *config) {
@@ -99,7 +99,7 @@ void SourceSensor::readCAM() {
     }
 }
 
-void SourceSensor::readyCAM(libcamera::Request *request) {
+void SourceHardware::readyCAM(libcamera::Request *request) {
     if(request->status() == libcamera::Request::RequestCancelled) {
         return;
     }

@@ -3,7 +3,7 @@
 
 #include "Source.hpp"
 // #include "SourceDataset.hpp"
-#include "SourceSensor.hpp"
+#include "SourceHardware.hpp"
 #include "Visualization.hpp"
 
 class Listener : public Source::Listener {
@@ -53,7 +53,7 @@ int main() {
     Listener listener(vio);
 
     // SourceDataset source(&listener, "datasets/dataset-corridor1_512_16");
-    SourceSensor source(&listener);
+    SourceHardware source(&listener);
 
     Visualization visualization;
 
