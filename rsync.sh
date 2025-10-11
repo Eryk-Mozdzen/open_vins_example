@@ -1,6 +1,7 @@
 #!/bin/bash
 
 rsync -avz \
+    calibrate \
     mpu6050 \
     vio \
-    emozdzen@192.168.0.19:/home/emozdzen
+    emozdzen@10.42.0.164:/home/emozdzen

@@ -200,8 +200,11 @@ typedef struct {
 } device_t;
 
 static void reg_write(struct i2c_client *client, const uint8_t reg, const uint8_t value) {
-    if(i2c_smbus_write_byte_data(client, reg, value) < 0) {
-        dev_err(&client->dev, "mpu6050: failed to write 0x%02X to reg 0x%02X\n", value, reg);
+    const int ret = i2c_smbus_write_byte_data(client, reg, value);
+
+    if(ret < 0) {
+        dev_err(&client->dev, "mpu6050: failed to write 0x%02X to reg 0x%02X: %d\n", value, reg,
+                ret);
     }
 }
 

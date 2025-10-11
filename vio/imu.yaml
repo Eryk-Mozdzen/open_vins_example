@@ -6,10 +6,10 @@ imu0:
     - [0.0, 1.0, 0.0, 0.0]
     - [0.0, 0.0, 1.0, 0.0]
     - [0.0, 0.0, 0.0, 1.0]
-  accelerometer_noise_density: 0.0028
-  accelerometer_random_walk: 0.00086
-  gyroscope_noise_density: 0.00016
-  gyroscope_random_walk: 0.000022
+  accelerometer_noise_density: 2.0000e-3
+  accelerometer_random_walk: 3.0000e-3
+  gyroscope_noise_density: 1.6968e-04
+  gyroscope_random_walk: 1.9393e-05
   time_offset: 0.0
   update_rate: 200.0
   model: "kalibr"

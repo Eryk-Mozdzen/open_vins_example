@@ -12,8 +12,15 @@ class Listener : public Source::Listener {
     void available(const Source::IMU &sample) override {
         ov_core::ImuData data;
         data.timestamp = sample.timestamp * 1E-9;
-        data.wm = Eigen::Vector3d(sample.gyro[0], sample.gyro[1], sample.gyro[2]);
-        data.am = Eigen::Vector3d(sample.accel[0], sample.accel[1], sample.accel[2]);
+        // data.wm = Eigen::Vector3d(sample.gyro[0], sample.gyro[1], sample.gyro[2]);
+        // data.am = Eigen::Vector3d(sample.accel[0], sample.accel[1], sample.accel[2]);
+
+        data.wm = Eigen::Vector3d(sample.gyro[1], -sample.gyro[0], sample.gyro[2]);
+        data.am = Eigen::Vector3d(sample.accel[1], -sample.accel[0], sample.accel[2]);
+
+        // printf("IMU %10lu %+7.2f %+7.2f %+7.2f %+7.2f %+7.2f %+7.2f\n", sample.timestamp,
+        //        sample.gyro[0], sample.gyro[1], sample.gyro[2], sample.accel[0], sample.accel[1],
+        //        sample.accel[2]);
 
         vio->feed_measurement_imu(data);
     }
@@ -24,6 +31,8 @@ class Listener : public Source::Listener {
         data.sensor_ids = {0};
         data.masks = {cv::Mat(480, 640, CV_8UC1, cv::Scalar(0))};
         data.images = {sample.img0};
+
+        // printf("CAM %10lu\n", sample.timestamp);
 
         vio->feed_measurement_camera(data);
     }
@@ -46,10 +55,10 @@ int main() {
     // SourceDataset source(&listener, "datasets/dataset-corridor1_512_16");
     SourceSensor source(&listener);
 
-    // Visualization visualization;
+    Visualization visualization;
 
     while(true) {
-        double timestamp;
+        /*double timestamp;
         cv::Mat window;
 
         vio->get_active_image(timestamp, window);
@@ -57,12 +66,12 @@ int main() {
         if((window.size().width > 0) && (window.size().height > 0)) {
             cv::imshow("window", window);
             cv::waitKey(1);
-        }
+        }*/
 
-        /*const auto q = vio->get_state()->_imu->quat();
+        const auto q = vio->get_state()->_imu->quat();
         const auto p = vio->get_state()->_imu->pos();
 
-        visualization.update(q.data(), p.data());*/
+        visualization.update(q.data(), p.data());
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
