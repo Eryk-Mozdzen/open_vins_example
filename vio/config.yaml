@@ -58,6 +58,9 @@ record_timing_information: false
 record_timing_filepath: "/tmp/traj_timing.txt"
 
 save_total_state: false
+filepath_est: "/tmp/ov_estimate.txt"
+filepath_std: "/tmp/ov_estimate_std.txt"
+filepath_gt: "/tmp/ov_groundtruth.txt"
 
 use_klt: true
 num_pts: 200
@@ -66,7 +69,7 @@ grid_x: 5
 grid_y: 5
 min_px_dist: 10
 knn_ratio: 0.70
-track_frequency: 16.0
+track_frequency: 21.0
 downsample_cameras: false
 num_opencv_threads: 4
 histogram_method: "HISTOGRAM"

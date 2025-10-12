@@ -2,7 +2,7 @@
 #include <state/State.h>
 
 #include "Source.hpp"
-// #include "SourceDataset.hpp"
+#include "SourceDataset.hpp"
 #include "SourceHardware.hpp"
 #include "Visualization.hpp"
 
@@ -12,11 +12,11 @@ class Listener : public Source::Listener {
     void available(const Source::IMU &sample) override {
         ov_core::ImuData data;
         data.timestamp = sample.timestamp * 1E-9;
-        // data.wm = Eigen::Vector3d(sample.gyro[0], sample.gyro[1], sample.gyro[2]);
-        // data.am = Eigen::Vector3d(sample.accel[0], sample.accel[1], sample.accel[2]);
+        data.wm = Eigen::Vector3d(sample.gyro[0], sample.gyro[1], sample.gyro[2]);
+        data.am = Eigen::Vector3d(sample.accel[0], sample.accel[1], sample.accel[2]);
 
-        data.wm = Eigen::Vector3d(sample.gyro[1], -sample.gyro[0], sample.gyro[2]);
-        data.am = Eigen::Vector3d(sample.accel[1], -sample.accel[0], sample.accel[2]);
+        // data.wm = Eigen::Vector3d(sample.gyro[1], -sample.gyro[0], sample.gyro[2]);
+        // data.am = Eigen::Vector3d(sample.accel[1], -sample.accel[0], sample.accel[2]);
 
         // printf("IMU %10lu %+7.2f %+7.2f %+7.2f %+7.2f %+7.2f %+7.2f\n", sample.timestamp,
         //        sample.gyro[0], sample.gyro[1], sample.gyro[2], sample.accel[0], sample.accel[1],
@@ -29,7 +29,7 @@ class Listener : public Source::Listener {
         ov_core::CameraData data;
         data.timestamp = sample.timestamp * 1E-9;
         data.sensor_ids = {0};
-        data.masks = {cv::Mat(480, 640, CV_8UC1, cv::Scalar(0))};
+        data.masks = {cv::Mat(512, 512, CV_8UC1, cv::Scalar(0))};
         data.images = {sample.img0};
 
         // printf("CAM %10lu\n", sample.timestamp);
@@ -52,8 +52,8 @@ int main() {
 
     Listener listener(vio);
 
-    // SourceDataset source(&listener, "datasets/dataset-corridor1_512_16");
-    SourceHardware source(&listener);
+    SourceDataset source(&listener, "../datasets/dataset-corridor1_512_16");
+    // SourceHardware source(&listener);
 
     Visualization visualization;
 

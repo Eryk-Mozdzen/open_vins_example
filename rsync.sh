@@ -4,4 +4,4 @@ rsync -avz \
     calibrate \
     mpu6050 \
     vio \
-    emozdzen@10.42.0.164:/home/emozdzen
+    emozdzen@192.168.168.119:/home/emozdzen

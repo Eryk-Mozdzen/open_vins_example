@@ -16,7 +16,7 @@ Visualization::Visualization() {
     struct sockaddr_in server;
     server.sin_family = AF_INET;
     server.sin_port = htons(8080);
-    server.sin_addr.s_addr = inet_addr("10.42.0.1");
+    server.sin_addr.s_addr = inet_addr("192.168.168.50");
 
     if(connect(sock, (struct sockaddr *)&server, sizeof(server)) == -1) {
         sock = 0;
@@ -72,10 +72,10 @@ void Visualization::update(const double quaternion[4], const double position[3])
     ss << "\"command\" : \"update\",";
     ss << "\"path\" : \"marker\",";
     ss << "\"transform\" : {";
-    //ss << "\"translation\" : [";
-    //ss << position[0] << ", ";
-    //ss << position[1] << ", ";
-    //ss << position[2] << "],";
+    ss << "\"translation\" : [";
+    ss << position[0] << ", ";
+    ss << position[1] << ", ";
+    ss << position[2] << "],";
     ss << "\"quaternion\" : [";
     ss << quaternion[3] << ", ";
     ss << quaternion[0] << ", ";
@@ -85,14 +85,14 @@ void Visualization::update(const double quaternion[4], const double position[3])
     ss << "}";
     write(ss.str());
 
-    //std::stringstream ss2;
-    //ss2 << "{";
-    //ss2 << "\"command\" : \"camera\",";
-    //ss2 << "\"alpha\": 0.03,";
-    //ss2 << "\"position\" : [";
-    //ss2 << position[0] << ", ";
-    //ss2 << position[1] << ", ";
-    //ss2 << position[2] << "]";
-    //ss2 << "}";
-    //write(ss2.str());
+    std::stringstream ss2;
+    ss2 << "{";
+    ss2 << "\"command\" : \"camera\",";
+    ss2 << "\"alpha\": 0.03,";
+    ss2 << "\"position\" : [";
+    ss2 << position[0] << ", ";
+    ss2 << position[1] << ", ";
+    ss2 << position[2] << "]";
+    ss2 << "}";
+    write(ss2.str());
 }
