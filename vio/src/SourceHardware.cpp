@@ -92,6 +92,11 @@ void SourceHardware::readCAM() {
         request->addBuffer(stream, buffers[0].get());
     }
 
+    auto &controls = request->controls();
+    controls.set(libcamera::controls::ExposureTimeMode,
+                 libcamera::controls::ExposureTimeModeManual);
+    controls.set(libcamera::controls::ExposureTime, 50000);
+
     camera->queueRequest(request.get());
 
     while(true) {
