@@ -16,7 +16,8 @@ void SourceDataset::readIMU() {
     std::string line;
     std::getline(file, line);
 
-    auto time = std::chrono::system_clock::now();
+    const auto time = std::chrono::system_clock::now();
+    int64_t start = -1;
 
     while(std::getline(file, line)) {
         std::stringstream ss(line);
@@ -38,10 +39,13 @@ void SourceDataset::readIMU() {
         sample.accel[1] = std::stof(ay);
         sample.accel[2] = std::stof(az);
 
-        listener->available(sample);
+        if(start < 0) {
+            start = sample.timestamp;
+        }
 
-        time += std::chrono::milliseconds(5);
-        std::this_thread::sleep_until(time);
+        std::this_thread::sleep_until(time + std::chrono::nanoseconds(sample.timestamp - start));
+
+        listener->available(sample);
     }
 }
 
@@ -50,7 +54,8 @@ void SourceDataset::readCAM() {
     std::string line;
     std::getline(file, line);
 
-    auto time = std::chrono::system_clock::now();
+    const auto time = std::chrono::system_clock::now();
+    int64_t start = -1;
 
     while(std::getline(file, line)) {
         std::stringstream ss(line);
@@ -66,9 +71,12 @@ void SourceDataset::readCAM() {
         cv::cvtColor(img0, sample.img0, cv::COLOR_BGR2GRAY);
         cv::cvtColor(img1, sample.img1, cv::COLOR_BGR2GRAY);
 
-        listener->available(sample);
+        if(start < 0) {
+            start = sample.timestamp;
+        }
 
-        time += std::chrono::milliseconds(50);
-        std::this_thread::sleep_until(time);
+        std::this_thread::sleep_until(time + std::chrono::nanoseconds(sample.timestamp - start));
+
+        listener->available(sample);
     }
 }
