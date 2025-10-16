@@ -50,6 +50,7 @@ int main() {
     Listener listener(vio);
 
     SourceDataset source(&listener, "../datasets/dataset-corridor1_512_16");
+    // SourceDataset source(&listener, "../datasets/test");
     // SourceHardware source(&listener);
 
     Visualization visualization;
@@ -60,7 +61,7 @@ int main() {
 
         vio->get_active_image(timestamp, window);
 
-        if((window.size().width > 0) && (window.size().height > 0)) {
+        if(!window.empty()) {
             cv::imshow("window", window);
             cv::waitKey(1);
         }*/
