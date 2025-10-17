@@ -11,7 +11,6 @@ struct MPU6050 {
     int64_t timestamp;
     int16_t gyro[3];
     int16_t accel[3];
-    uint8_t _padding[4];
 };
 
 SourceHardware::SourceHardware(Source::Listener *listener)

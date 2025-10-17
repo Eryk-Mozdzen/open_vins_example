@@ -1,8 +1,8 @@
+#include <linux/circ_buf.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/i2c.h>
 #include <linux/init.h>
-#include <linux/kfifo.h>
 #include <linux/ktime.h>
 #include <linux/miscdevice.h>
 #include <linux/module.h>
@@ -180,21 +180,27 @@
 #define MPU6050_PWR_MGMT_2_STBY_ZG                  (0x01 << 0)
 #define MPU6050_WHO_AM_I_VALUE                      (0x68 << 0)
 
-#define GPIO_INT  586
-#define FIFO_SIZE 1024
+#define GPIO_INT 586
+#define BUF_MASK 0x0000000F
+#define BUF_SIZE 16
 
 typedef struct {
     int64_t timestamp;
     int16_t gyro[3];
     int16_t accel[3];
-    uint8_t _padding[4];
 } sample_t;
+
+typedef struct {
+    sample_t buf[BUF_SIZE];
+    unsigned int head;
+    unsigned int tail;
+} circbuf_t;
 
 typedef struct {
     struct i2c_adapter *adapter;
     struct i2c_client *client;
     int irq;
-    struct kfifo fifo;
+    circbuf_t circbuf;
     spinlock_t lock;
     struct miscdevice miscdev;
 } device_t;
@@ -234,8 +240,11 @@ static irqreturn_t isr_drdy(int irq, void *dev_id) {
 
     unsigned long flags;
     spin_lock_irqsave(&device->lock, flags);
-    if(!kfifo_is_full(&device->fifo)) {
-        kfifo_in(&device->fifo, &sample, sizeof(sample));
+    device->circbuf.buf[device->circbuf.head] = sample;
+    device->circbuf.head++;
+    device->circbuf.head %= BUF_MASK;
+    if(CIRC_CNT(device->circbuf.head, device->circbuf.tail, BUF_SIZE) >= BUF_SIZE) {
+        device->circbuf.tail = device->circbuf.head - BUF_SIZE + 1;
     }
     spin_unlock_irqrestore(&device->lock, flags);
 
@@ -337,8 +346,11 @@ static ssize_t fops_read(struct file *file, char __user *buf, size_t count, loff
     sample_t sample;
     unsigned long flags;
     spin_lock_irqsave(&device.lock, flags);
-    if(!kfifo_is_empty(&device.fifo)) {
-        ret = kfifo_out(&device.fifo, &sample, sizeof(sample));
+    if(CIRC_CNT(device.circbuf.head, device.circbuf.tail, BUF_SIZE) >= 1) {
+        sample = device.circbuf.buf[device.circbuf.tail];
+        device.circbuf.tail++;
+        device.circbuf.tail %= BUF_MASK;
+        ret = 1;
     } else {
         ret = 0;
     }
@@ -365,6 +377,9 @@ static int mod_init(void) {
 
     spin_lock_init(&device.lock);
 
+    device.circbuf.head = 0;
+    device.circbuf.tail = 0;
+
     device.miscdev.fops = &fops;
     device.miscdev.minor = MISC_DYNAMIC_MINOR;
     device.miscdev.name = "mpu6050";
@@ -372,12 +387,6 @@ static int mod_init(void) {
     ret = misc_register(&device.miscdev);
     if(ret) {
         pr_err("mpu6050: failed to register miscdev: %d\n", ret);
-        return ret;
-    }
-
-    ret = kfifo_alloc(&device.fifo, FIFO_SIZE, GFP_KERNEL);
-    if(ret) {
-        pr_err("mpu6050: failed to allocate FIFO: %d\n", ret);
         return ret;
     }
 
@@ -405,7 +414,6 @@ static int mod_init(void) {
 
 static void mod_exit(void) {
     misc_deregister(&device.miscdev);
-    kfifo_free(&device.fifo);
 
     i2c_del_driver(&i2c_driver);
 

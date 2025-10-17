@@ -15,11 +15,11 @@ class Listener : public Source::Listener {
         data.wm = Eigen::Vector3d(sample.gyro[0], sample.gyro[1], sample.gyro[2]);
         data.am = Eigen::Vector3d(sample.accel[0], sample.accel[1], sample.accel[2]);
 
-        vio->feed_measurement_imu(data);
-
         // printf("IMU %10lu ms %+7.2f %+7.2f %+7.2f %+7.2f %+7.2f %+7.2f\n",
         //        sample.timestamp / 1000000LU, sample.gyro[0], sample.gyro[1], sample.gyro[2],
         //        sample.accel[0], sample.accel[1], sample.accel[2]);
+
+        vio->feed_measurement_imu(data);
     }
 
     void available(const Source::CAM &sample) override {
@@ -29,9 +29,9 @@ class Listener : public Source::Listener {
         data.masks = {cv::Mat(512, 512, CV_8UC1, cv::Scalar(0))};
         data.images = {sample.img0};
 
-        vio->feed_measurement_camera(data);
-
         // printf("CAM %10lu ms\n", sample.timestamp / 1000000LU);
+
+        vio->feed_measurement_camera(data);
     }
 
 public:
