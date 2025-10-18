@@ -135,7 +135,7 @@ void SourceHardware::readyCAM(libcamera::Request *request) {
         void *data = mmap(nullptr, plane.length, PROT_READ, MAP_SHARED, plane.fd.get(), 0);
 
         const cv::Mat gray(480, 640, CV_8UC1, data);
-        sample.img0 = gray.clone();
+        cv::flip(gray, sample.img0, -1);
 
         munmap(data, plane.length);
     }

@@ -40,9 +40,9 @@ public:
 };
 
 int main() {
-    const auto parser = std::make_shared<ov_core::YamlParser>("../config/tum/config.yaml");
+    // const auto parser = std::make_shared<ov_core::YamlParser>("../config/tum/config.yaml");
     // const auto parser = std::make_shared<ov_core::YamlParser>("../config/euroc/config.yaml");
-    // const auto parser = std::make_shared<ov_core::YamlParser>("../config/custom/config.yaml");
+    const auto parser = std::make_shared<ov_core::YamlParser>("../config/custom/config.yaml");
 
     ov_msckf::VioManagerOptions params;
     params.print_and_load(parser);
@@ -51,12 +51,14 @@ int main() {
 
     Listener listener(vio);
 
-    SourceDataset source(&listener, "../datasets/dataset-corridor1_512_16");
+    // SourceDataset source(&listener, "../datasets/dataset-corridor1_512_16");
     // SourceDataset source(&listener, "../datasets/MH_01_easy");
-    // SourceDataset source(&listener, "../datasets/custom");
+    SourceDataset source(&listener, "../datasets/custom");
     // SourceHardware source(&listener);
 
     Visualization visualization;
+
+    int points = 0;
 
     while(true) {
         /*double timestamp;
@@ -73,6 +75,16 @@ int main() {
         const auto p = vio->get_state()->_imu->pos();
 
         visualization.update(q.data(), p.data());
+
+        // const auto features = vio->get_features_SLAM();
+        const auto features = vio->get_good_features_MSCKF();
+        while(features.size() > points) {
+            visualization.createPoint(points);
+            points++;
+        }
+        for(int i = 0; i < features.size(); i++) {
+            visualization.movePoint(i, features[i].data());
+        }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }

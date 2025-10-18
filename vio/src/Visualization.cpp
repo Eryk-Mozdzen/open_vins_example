@@ -66,6 +66,33 @@ void Visualization::write(const std::string message) {
     }
 }
 
+void Visualization::createPoint(const int index) {
+    std::stringstream ss;
+    ss << "{";
+    ss << "\"command\" : \"create\",";
+    ss << "\"path\" : \"point_" << index << "\",";
+    ss << "\"geometry\" : {\"shape\" : \"sphere\", \"radius\" : 0.05},";
+    ss << "\"material\" : {\"color\" : [255, 255, 255]},";
+    ss << "\"transform\" : {\"translation\" : [0, 0, 0]}";
+    ss << "}";
+    write(ss.str());
+}
+
+void Visualization::movePoint(const int index, const double position[3]) {
+    std::stringstream ss;
+    ss << "{";
+    ss << "\"command\" : \"update\",";
+    ss << "\"path\" : \"point_" << index << "\",";
+    ss << "\"transform\" : {";
+    ss << "\"translation\" : [";
+    ss << position[0] << ",";
+    ss << position[1] << ",";
+    ss << position[2] << "]";
+    ss << "}";
+    ss << "}";
+    write(ss.str());
+}
+
 void Visualization::update(const double quaternion[4], const double position[3]) {
     std::stringstream ss;
     ss << "{";
@@ -73,13 +100,13 @@ void Visualization::update(const double quaternion[4], const double position[3])
     ss << "\"path\" : \"marker\",";
     ss << "\"transform\" : {";
     ss << "\"translation\" : [";
-    ss << position[0] << ", ";
-    ss << position[1] << ", ";
+    ss << position[0] << ",";
+    ss << position[1] << ",";
     ss << position[2] << "],";
     ss << "\"quaternion\" : [";
-    ss << quaternion[3] << ", ";
-    ss << quaternion[0] << ", ";
-    ss << quaternion[1] << ", ";
+    ss << quaternion[3] << ",";
+    ss << quaternion[0] << ",";
+    ss << quaternion[1] << ",";
     ss << quaternion[2] << "]";
     ss << "}";
     ss << "}";
@@ -90,8 +117,8 @@ void Visualization::update(const double quaternion[4], const double position[3])
     ss2 << "\"command\" : \"camera\",";
     ss2 << "\"alpha\": 0.03,";
     ss2 << "\"position\" : [";
-    ss2 << position[0] << ", ";
-    ss2 << position[1] << ", ";
+    ss2 << position[0] << ",";
+    ss2 << position[1] << ",";
     ss2 << position[2] << "]";
     ss2 << "}";
     write(ss2.str());
