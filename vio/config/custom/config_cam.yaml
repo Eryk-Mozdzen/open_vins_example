@@ -1,0 +1,13 @@
+%YAML:1.0
+
+cam0:
+  T_imu_cam:
+    - [ 0.0, 1.0, 0.0, 0.025]
+    - [-1.0, 0.0, 0.0, 0.000]
+    - [ 0.0, 0.0, 1.0, 0.000]
+    - [ 0.0, 0.0, 0.0, 1.0]
+  camera_model: pinhole
+  distortion_coeffs: [0.0, 0.0, 0.0, 0.0]
+  distortion_model: equidistant
+  intrinsics: [597.19637047, 596.71435175, 320.82301275, 250.60293623]
+  resolution: [640, 480]

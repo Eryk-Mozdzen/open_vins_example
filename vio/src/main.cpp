@@ -26,7 +26,7 @@ class Listener : public Source::Listener {
         ov_core::CameraData data;
         data.timestamp = sample.timestamp * 1E-9;
         data.sensor_ids = {0};
-        data.masks = {cv::Mat(512, 512, CV_8UC1, cv::Scalar(0))};
+        data.masks = {cv::Mat(sample.img0.size(), CV_8UC1, cv::Scalar(0))};
         data.images = {sample.img0};
 
         // printf("CAM %10lu ms\n", sample.timestamp / 1000000LU);
@@ -40,7 +40,9 @@ public:
 };
 
 int main() {
-    const auto parser = std::make_shared<ov_core::YamlParser>("../config.yaml");
+    const auto parser = std::make_shared<ov_core::YamlParser>("../config/tum/config.yaml");
+    // const auto parser = std::make_shared<ov_core::YamlParser>("../config/euroc/config.yaml");
+    // const auto parser = std::make_shared<ov_core::YamlParser>("../config/custom/config.yaml");
 
     ov_msckf::VioManagerOptions params;
     params.print_and_load(parser);
@@ -50,7 +52,8 @@ int main() {
     Listener listener(vio);
 
     SourceDataset source(&listener, "../datasets/dataset-corridor1_512_16");
-    // SourceDataset source(&listener, "../datasets/test");
+    // SourceDataset source(&listener, "../datasets/MH_01_easy");
+    // SourceDataset source(&listener, "../datasets/custom");
     // SourceHardware source(&listener);
 
     Visualization visualization;

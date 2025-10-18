@@ -87,5 +87,5 @@ up_aruco_chi2_multipler: 1
 
 use_mask: false
 
-relative_config_imu: "imu.yaml"
-relative_config_imucam: "imucam.yaml"
+relative_config_imu: "config_imu.yaml"
+relative_config_imucam: "config_cam.yaml"

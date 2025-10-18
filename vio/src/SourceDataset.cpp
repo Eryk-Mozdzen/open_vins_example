@@ -1,6 +1,8 @@
+#include <cctype>
 #include <chrono>
 #include <fstream>
 #include <sstream>
+#include <string>
 #include <thread>
 
 #include "SourceDataset.hpp"
@@ -78,6 +80,8 @@ void SourceDataset::readCAM() {
         std::string timestamp, filename;
         std::getline(ss, timestamp, ',');
         std::getline(ss, filename);
+
+        filename.erase(filename.find_last_not_of(" \t\n\r\f\v") + 1);
 
         Source::CAM sample;
         sample.timestamp = std::stol(timestamp);
