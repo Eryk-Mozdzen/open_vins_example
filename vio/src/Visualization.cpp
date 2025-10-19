@@ -111,15 +111,4 @@ void Visualization::update(const double quaternion[4], const double position[3])
     ss << "}";
     ss << "}";
     write(ss.str());
-
-    std::stringstream ss2;
-    ss2 << "{";
-    ss2 << "\"command\" : \"camera\",";
-    ss2 << "\"alpha\": 0.03,";
-    ss2 << "\"position\" : [";
-    ss2 << position[0] << ",";
-    ss2 << position[1] << ",";
-    ss2 << position[2] << "]";
-    ss2 << "}";
-    write(ss2.str());
 }
