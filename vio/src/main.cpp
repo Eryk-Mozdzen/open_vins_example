@@ -53,8 +53,8 @@ int main() {
 
     // SourceDataset source(&listener, "../datasets/dataset-corridor1_512_16");
     // SourceDataset source(&listener, "../datasets/MH_01_easy");
-    SourceDataset source(&listener, "../datasets/custom");
-    // SourceHardware source(&listener);
+    // SourceDataset source(&listener, "../datasets/custom");
+    SourceHardware source(&listener);
 
     Visualization visualization;
 
@@ -76,8 +76,8 @@ int main() {
 
         visualization.update(q.data(), p.data());
 
-        // const auto features = vio->get_features_SLAM();
-        const auto features = vio->get_good_features_MSCKF();
+        const auto features = vio->get_features_SLAM();
+        // const auto features = vio->get_good_features_MSCKF();
         while(features.size() > points) {
             visualization.createPoint(points);
             points++;

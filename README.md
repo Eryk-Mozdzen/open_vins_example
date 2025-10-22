@@ -45,14 +45,6 @@ git clone --depth 1 --branch v2.7 https://github.com/rpng/open_vins.git \
     && sudo make install
 ```
 
-### Camera
-
-```bash
-sudo nano /boot/firmware/config.txt
-# camera_auto_detect=0
-# dtoverlay=ov5647,cam0   add to [all] section
-```
-
 ### IMU
 
 ```bash

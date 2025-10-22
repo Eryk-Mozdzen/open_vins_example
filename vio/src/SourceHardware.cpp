@@ -94,7 +94,9 @@ void SourceHardware::readCAM() {
     auto &controls = request->controls();
     controls.set(libcamera::controls::ExposureTimeMode,
                  libcamera::controls::ExposureTimeModeManual);
-    controls.set(libcamera::controls::ExposureTime, 50000);
+    controls.set(libcamera::controls::ExposureTime, 10000);
+    controls.set(libcamera::controls::FrameDurationLimits,
+                 libcamera::Span<const int64_t, 2>({50000, 50000}));
 
     camera->queueRequest(request.get());
 

@@ -1,7 +1,6 @@
 #!/bin/bash
 
 rsync -avz \
-    calibrate \
     mpu6050 \
     vio \
     recorder \

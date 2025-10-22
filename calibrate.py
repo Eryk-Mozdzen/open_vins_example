@@ -10,7 +10,7 @@ objp[0, :, :2] = np.mgrid[0:7, 0:7].T.reshape(-1, 2) * 0.02
 objpoints = []
 imgpoints = []
 
-images = glob.glob('images/*.png')
+images = glob.glob('vio/datasets/calibration/mav0/cam0/data/*.png')
 
 for fname in images:
     img = cv.imread(fname)
@@ -22,7 +22,7 @@ for fname in images:
         imgpoints.append(corners)
         cv.drawChessboardCorners(img, (7,7), corners, ret)
         cv.imshow('img', img)
-        cv.waitKey(500)
+        cv.waitKey(1)
 
 K = np.zeros((3,3))
 D = np.zeros((4,1))
