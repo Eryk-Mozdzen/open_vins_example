@@ -1,0 +1,120 @@
+%%%%%%% By Michał Swoboda
+%%%%%%% Poprawki by Błażej Kowalczyk
+%%%%%%% Uporządkował pewne rzeczy Bartłomiej Kurosz
+%%%%%%% Więcej porządków i poprawek Gabriela Kaczmarek
+
+\usepackage{lmodern}
+\usepackage{polski}
+\usepackage[utf8]{inputenc}
+\usepackage{amsfonts}
+\usepackage{tikz}
+\usepackage{wrapfig}
+\usepackage{pdfpages}
+
+\usepackage{listings}   
+\usepackage{color}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\lstset{
+	language=C,                % the language of the code
+	basicstyle=\small,           % the size of the fonts that are used for the code
+	numbers=left,                   % where to put the line-numbers
+	numberstyle=\footnotesize\color{gray},  % the style that is used for the line-numbers
+	stepnumber=1,                   % the step between two line-numbers. If it's 1, each line 
+	% will be numbered
+	numbersep=5pt,                  % how far the line-numbers are from the code
+	backgroundcolor=\color{white},      % choose the background color. You must add \usepackage{color}
+	showspaces=false,               % show spaces adding particular underscores
+	showstringspaces=false,         % underline spaces within strings
+	showtabs=false,                 % show tabs within strings adding particular underscores
+	%frame=single,                   % adds a frame around the code
+	rulecolor=\color{black},        % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+	tabsize=2,                      % sets default tabsize to 2 spaces
+	captionpos=b,                   % sets the caption-position to bottom
+	breaklines=true,                % sets automatic line breaking
+	breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+	%title=\lstname,                   % show the filename of files included with \lstinputlisting;
+	% also try caption instead of title
+	keywordstyle=\color{blue},          % keyword style
+	commentstyle=\color{dkgreen},       % comment style
+	stringstyle=\color{mauve},         % string literal style
+	escapeinside={\%*}{*)},            % if you want to add LaTeX within your code
+	morekeywords={*,...},              % if you want to add more keywords to the set
+	deletekeywords={...}              % if you want to delete keywords from the given language
+}
+
+%polish signs in lst code
+\lstset{literate=%
+	{ą}{{\k{a}}}1
+	{ć}{{\'c}}1
+	{ę}{{\k{e}}}1
+	{ł}{{\l}}1
+	{ń}{{\'n}}1
+	{ó}{{\'o}}1
+	{ś}{{\'s}}1
+	{ż}{{\.z}}1
+	{ź}{{\'z}}1
+	{Ą}{{\k{A}}}1
+	{Ć}{{\'C}}1
+	{Ę}{{\k{E}}}1
+	{Ł}{{\L}}1
+	{Ń}{{\'N}}1
+	{Ó}{{\'O}}1
+	{Ś}{{\'S}}1
+	{Ż}{{\.Z}}1
+	{Ź}{{\'Z}}1
+}
+
+%%%%%%%%%%%%%%%% Początek poleceń własnych
+% Maksymalna dostępna wysokość pola w~prezentacji (między wąskim nagłówkiem a~stopką)
+% dobrana eksperymentalnie - może w~przyszłości po prostu ją wyliczać???
+\newlength{\maxheight}
+\setlength{\maxheight}{\paperheight}
+\addtolength{\maxheight}{-17.85pt}  % tyle zajmuje naczółek ze stopką 
+
+% Polecenie do dokładania wycentrowanych rzeczy (zdjęć) na środku slajdu 
+% bez tytulariów (ale ze stopką i~naczółkiem)
+% By uzyskać obrazek "na całą stronę" jako argumentu należy użyć
+% \includegraphics[height=\maxheight,width=\paperwidth]{figure/balbina.jpg}
+% Jeśli nie chcesz zmian proporcji - zrezygnuj z~jednego z~wymiarów
+% Obrazki za duże przykryją naczółek strony
+% By wszystko było na swoim miejscu potrzebna jest dwukrotna kompilacja 
+\newcommand{\framecentered}[1]{
+  \setbeamertemplate{background canvas}{}
+  \begin{frame}[c]
+    \begin{tikzpicture}[overlay, remember picture]
+      \node[anchor=center] at (current page.center) 
+      {#1};
+    \end{tikzpicture}
+  \end{frame}}
+%%%%%%%%%%%%%%%% Koniec poleceń własnych
+
+%%%%%%%%%%%%%%%%Początek ustawień
+\usebackgroundtemplate{%
+  \includegraphics[width=\paperwidth,height=\paperheight]{background/tlo_bezlogo.pdf}} 
+
+\usepackage{beamerthemesplit}
+\useoutertheme{infolines}
+\useinnertheme{rounded}
+
+\definecolor{konar2}{RGB}{240,152,52}
+\definecolor{konar}{RGB}{151,58,66}
+
+\setbeamercolor{block title}{fg=black,bg=konar2}
+\setbeamercolor{block title alerted}{fg=konar2,bg=black}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamercolor{frametitle}{fg=white,bg=konar}
+\setbeamercolor{section in head/foot}{bg=konar}
+\setbeamercolor{author in head/foot}{fg=Black,bg=konar2}
+\setbeamercolor{date in head/foot}{fg=Black}
+\setbeamercolor{title in head/foot}{fg=white, bg=konar}
+\setbeamercolor{section in head/foot}{fg=white}
+\setbeamercolor{titlelike}{fg=black}
+\setbeamercolor{structure}{bg=black, fg=konar2}
+\setbeamercolor{subsection in head/foot}{fg=black}
+\setbeamercolor{item}{bg=white}
+
+%%%%%%%%%%%%%%%%%Koniec Ustawień
+

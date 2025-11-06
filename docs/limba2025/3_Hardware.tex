@@ -1,0 +1,44 @@
+\section{Dobór sprzętu}
+    \begin{frame}{Jakie IMU?}
+        \begin{itemize}
+            \item akcelerometr (XYZ) i żyroskop (XYZ)
+            \item zwykły tani MEMS wystarczy
+            \item pomiar ze \textbf{stałą} częstotliwością: 100Hz, 200Hz, 500Hz
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{Jaka kamera?}
+        \begin{itemize}
+            \item niska rozdzielczość: 512x512, 640x480, 720x480, 1024x512
+            \item niska \textbf{stała} częstotliwość migawki: 20Hz, 30Hz
+            \item obraz w odcieniach szarości
+            \item krótki czas ekspozycji
+            \item migawka typu \textbf{global shutter} (\$\$\$)
+            \item obiektyw szerokokątny $+120^\circ$ (\textbf{rybie oko})
+            \item można mieć jedną
+            \item można mieć dwie (\textbf{stereowizja})
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{Mój setup}
+        \begin{figure}[tp]
+            \centering
+            \includegraphics[page=1, trim=75 400 50 140, clip, width=\textwidth]{images/Drawing1.pdf}
+        \end{figure}%
+    \end{frame}
+
+    \begin{frame}{Nietrafione zakupy i problemy}
+        \begin{itemize}
+            \item "zasilacz z czarnej listy"
+            \item cross-kompilacja (problem z zależnościami)
+            \item podrobiony MPU6050 (zła wartość WHO\_I\_AM)
+            \item obraz na żywo (laguje fest)
+            \item kamera OV5647 (brak global shutter)
+            \item tasiemki do kamer (są w zestwie)
+            \item regulacja ostrości obiektywu
+        \end{itemize}
+        \begin{figure}
+            \centering
+            \includegraphics[width=0.3\textwidth]{images/ov5647.jpg}
+        \end{figure}
+    \end{frame}
