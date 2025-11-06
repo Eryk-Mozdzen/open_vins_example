@@ -1,20 +1,23 @@
 \section{Oprogramowanie OpenVINS}
     \begin{frame}{Co to OpenVINS}
         \begin{itemize}
-            \item implementacja MSCKF + frontend OpenCV
+            \item OpenCV + MSCKF + SLAM
             \item rozbudowana konfiguracja
             \item łatwy w użyciu
             \item wspiera setup z jedną i wieloma kamerami
             \item kompensacja bias-ów IMU
+            \item ignorowanie wskazanych pól na obrazie
             \item słaba dokumentacja
             \item stare wersje zależności ze źródeł
         \end{itemize}
     \end{frame}
 
-    \begin{frame}{Co daje OpenVINS}
-
-    \end{frame}
-
     \begin{frame}{Jak zrobić żeby działało?}
-
+        \begin{enumerate}
+            \item Otrzymywać dane z IMU (częstotliwość, timestamp)
+            \item Otrzymywać klatki z kamery (częstotliwość, timestamp)
+            \item Skompilować OpenVINS
+            \item Ustalić transformacje kamera--IMU
+            \item Skalibrować kamerę (distortion +  intristic)
+        \end{enumerate}
     \end{frame}
