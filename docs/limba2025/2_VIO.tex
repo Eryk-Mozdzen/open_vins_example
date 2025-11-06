@@ -2,3 +2,37 @@
     \begin{frame}{Czym jest VIO}
 
     \end{frame}
+
+    \begin{frame}{Datasety}
+        \dirtree{%
+        .1 mav0.
+        .2 cam0.
+        .3 data.
+        .4 2235808518000.png.
+        .4 2235841851000.png.
+        .4 \dots .
+        .4 2245158783000.png.
+        .3 data.csv.
+        .2 imu0.
+        .3 data.csv.
+        }
+
+        \vfill
+        Przetestowane na własnej skórze:
+        \begin{itemize}
+            \item \href{https://cvg.cit.tum.de/data/datasets/visual-inertial-dataset}{Visual-Inertial Dataset (TUM)}
+            \item \href{https://cvg.cit.tum.de/data/datasets/visual-inertial-dataset}{The EuRoC MAV Dataset (ETH Zurich)}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{Datasety}{mav0/cam0/data.csv}
+        \begin{table}
+            \csvautobooktabular[separator=,]{csv/cam0_data.csv}
+        \end{table}
+    \end{frame}
+
+    \begin{frame}{Datasety}{mav0/imu0/data.csv}
+        \begin{table}
+            \csvautobooktabular[separator=,]{csv/imu0_data.csv}
+        \end{table}
+    \end{frame}
