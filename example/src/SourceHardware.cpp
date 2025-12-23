@@ -7,6 +7,7 @@
 
 #include "SourceHardware.hpp"
 
+// match MPU6050 kernel module structure
 struct MPU6050 {
     int64_t timestamp;
     int16_t gyro[3];
@@ -15,21 +16,8 @@ struct MPU6050 {
 
 SourceHardware::SourceHardware(Source::Listener *listener)
     : Source(listener),
-      run{true},
       threadIMU(&SourceHardware::readIMU, this),
       threadCAM(&SourceHardware::readCAM, this) {
-}
-
-SourceHardware::~SourceHardware() {
-    run = false;
-
-    if(threadIMU.joinable()) {
-        threadIMU.join();
-    }
-
-    if(threadCAM.joinable()) {
-        threadCAM.join();
-    }
 }
 
 void SourceHardware::readIMU() {
@@ -39,7 +27,7 @@ void SourceHardware::readIMU() {
         return;
     }
 
-    while(run) {
+    while(true) {
         MPU6050 mpu6050;
         if(read(fd, &mpu6050, sizeof(mpu6050)) != sizeof(mpu6050)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -49,16 +37,21 @@ void SourceHardware::readIMU() {
         constexpr const float scale_gyro = 0.017453292519943f / 65.5f;
         constexpr const float scale_accel = 9.80665f / 8192.f;
 
-        Source::IMU sample;
-        sample.timestamp = mpu6050.timestamp;
-        sample.gyro[0] = mpu6050.gyro[0] * scale_gyro;
-        sample.gyro[1] = mpu6050.gyro[1] * scale_gyro;
-        sample.gyro[2] = mpu6050.gyro[2] * scale_gyro;
-        sample.accel[0] = mpu6050.accel[0] * scale_accel;
-        sample.accel[1] = mpu6050.accel[1] * scale_accel;
-        sample.accel[2] = mpu6050.accel[2] * scale_accel;
+        const int64_t timestamp = mpu6050.timestamp;
 
-        listener->available(sample);
+        const float accel[3] = {
+            mpu6050.accel[0] * scale_accel,
+            mpu6050.accel[1] * scale_accel,
+            mpu6050.accel[2] * scale_accel,
+        };
+
+        const float gyro[3] = {
+            mpu6050.gyro[0] * scale_gyro,
+            mpu6050.gyro[1] * scale_gyro,
+            mpu6050.gyro[2] * scale_gyro,
+        };
+
+        listener.handle(timestamp, accel, gyro);
     }
 }
 
@@ -113,36 +106,34 @@ void SourceHardware::readCAM() {
 
     camera->queueRequest(request.get());
 
-    while(run) {
+    while(true) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
-
-    camera->stop();
-    camera->release();
-    camera.reset();
-    cm->stop();
 }
 
 void SourceHardware::readyCAM(libcamera::Request *request) {
-    if((!run) || (request->status() == libcamera::Request::RequestCancelled)) {
+    if(request->status() == libcamera::Request::RequestCancelled) {
         return;
     }
 
-    Source::CAM sample;
+    const int64_t timestamp =
+        request->metadata().get(libcamera::controls::SensorTimestamp).value_or(0);
 
-    sample.timestamp = request->metadata().get(libcamera::controls::SensorTimestamp).value_or(0);
+    cv::Mat img;
 
     for(auto &[stream, buffer] : request->buffers()) {
         const auto &plane = buffer->planes().front();
         void *data = mmap(nullptr, plane.length, PROT_READ, MAP_SHARED, plane.fd.get(), 0);
 
         const cv::Mat gray(480, 640, CV_8UC1, data);
-        cv::flip(gray, sample.img0, -1);
+
+        // my hardware setup consist of camera rotated by 180deg, so I need to rotate image back
+        cv::flip(gray, img, -1);
 
         munmap(data, plane.length);
     }
 
-    listener->available(sample);
+    listener.handle(timestamp, img);
 
     request->reuse(libcamera::Request::ReuseBuffers);
     camera->queueRequest(request);

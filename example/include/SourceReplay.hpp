@@ -1,15 +1,15 @@
-#ifndef SOURCE_DATASET_HPP
-#define SOURCE_DATASET_HPP
+#ifndef SOURCE_REPLAY_HPP
+#define SOURCE_REPLAY_HPP
 
 #include <chrono>
 #include <thread>
 
 #include "Source.hpp"
 
-class SourceDataset : public Source {
+class SourceReplay : public Source {
     std::string path;
     int64_t reference;
-    std::chrono::_V2::system_clock::time_point start;
+    std::chrono::system_clock::time_point start;
     std::thread threadIMU;
     std::thread threadCAM;
 
@@ -17,7 +17,7 @@ class SourceDataset : public Source {
     void readCAM();
 
 public:
-    SourceDataset(Source::Listener *listener, const std::string path);
+    SourceReplay(Source::Listener &listener, const std::string path);
 };
 
 #endif

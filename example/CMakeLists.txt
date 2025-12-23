@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(vio)
+project(example)
 
 find_package(PkgConfig REQUIRED)
 find_package(Boost REQUIRED COMPONENTS filesystem system)
@@ -11,8 +11,10 @@ pkg_check_modules(LIBCAMERA REQUIRED libcamera)
 
 add_executable(${CMAKE_PROJECT_NAME}
     "src/main.cpp"
+    "src/ListenerOpenVINS.cpp"
+    "src/ListenerRecord.cpp"
     "src/Source.cpp"
-    "src/SourceDataset.cpp"
+    "src/SourceReplay.cpp"
     "src/SourceHardware.cpp"
     "src/Visualization.cpp"
 )

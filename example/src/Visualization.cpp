@@ -2,10 +2,11 @@
 #include <sstream>
 #include <string>
 #include <unistd.h>
+#include <vector>
 
 #include "Visualization.hpp"
 
-Visualization::Visualization() {
+Visualization::Visualization(const std::string &ip) : points{0} {
     sock = socket(AF_INET, SOCK_STREAM, 0);
 
     if(sock == -1) {
@@ -16,7 +17,7 @@ Visualization::Visualization() {
     struct sockaddr_in server;
     server.sin_family = AF_INET;
     server.sin_port = htons(8080);
-    server.sin_addr.s_addr = inet_addr("192.168.168.50");
+    server.sin_addr.s_addr = inet_addr(ip.c_str());
 
     if(connect(sock, (struct sockaddr *)&server, sizeof(server)) == -1) {
         sock = 0;
@@ -60,54 +61,29 @@ Visualization::~Visualization() {
     }
 }
 
-void Visualization::write(const std::string message) {
+void Visualization::write(const std::string &message) {
     if(sock) {
         send(sock, message.c_str(), message.size(), 0);
     }
 }
 
-void Visualization::createPoint(const int index) {
-    std::stringstream ss;
-    ss << "{";
-    ss << "\"command\" : \"create\",";
-    ss << "\"path\" : \"point_" << index << "\",";
-    ss << "\"geometry\" : {\"shape\" : \"sphere\", \"radius\" : 0.05},";
-    ss << "\"material\" : {\"color\" : [255, 255, 255]},";
-    ss << "\"transform\" : {\"translation\" : [0, 0, 0]}";
-    ss << "}";
-    write(ss.str());
-}
-
-void Visualization::movePoint(const int index, const double position[3]) {
-    std::stringstream ss;
-    ss << "{";
-    ss << "\"command\" : \"update\",";
-    ss << "\"path\" : \"point_" << index << "\",";
-    ss << "\"transform\" : {";
-    ss << "\"translation\" : [";
-    ss << position[0] << ",";
-    ss << position[1] << ",";
-    ss << position[2] << "]";
-    ss << "}";
-    ss << "}";
-    write(ss.str());
-}
-
-void Visualization::update(const double quaternion[4], const double position[3]) {
+void Visualization::update(const Eigen::Vector4d &attitude,
+                           const Eigen::Vector3d &position,
+                           const std::vector<Eigen::Vector3d> &features) {
     std::stringstream ss;
     ss << "{";
     ss << "\"command\" : \"update\",";
     ss << "\"path\" : \"marker\",";
     ss << "\"transform\" : {";
     ss << "\"translation\" : [";
-    ss << position[0] << ",";
-    ss << position[1] << ",";
-    ss << position[2] << "],";
+    ss << position(0) << ",";
+    ss << position(1) << ",";
+    ss << position(2) << "],";
     ss << "\"quaternion\" : [";
-    ss << quaternion[3] << ",";
-    ss << quaternion[0] << ",";
-    ss << quaternion[1] << ",";
-    ss << quaternion[2] << "]";
+    ss << attitude(3) << ",";
+    ss << attitude(0) << ",";
+    ss << attitude(1) << ",";
+    ss << attitude(2) << "]";
     ss << "}";
     ss << "}";
     write(ss.str());
@@ -117,9 +93,38 @@ void Visualization::update(const double quaternion[4], const double position[3])
     ss2 << "\"command\" : \"camera\",";
     ss2 << "\"alpha\": 0.03,";
     ss2 << "\"position\" : [";
-    ss2 << position[0] << ",";
-    ss2 << position[1] << ",";
-    ss2 << position[2] << "]";
+    ss2 << position(0) << ",";
+    ss2 << position(1) << ",";
+    ss2 << position(2) << "]";
     ss2 << "}";
     write(ss2.str());
+
+    while(features.size() > points) {
+        std::stringstream ss;
+        ss << "{";
+        ss << "\"command\" : \"create\",";
+        ss << "\"path\" : \"point_" << points << "\",";
+        ss << "\"geometry\" : {\"shape\" : \"sphere\", \"radius\" : 0.05},";
+        ss << "\"material\" : {\"color\" : [255, 255, 255]},";
+        ss << "\"transform\" : {\"translation\" : [0, 0, 0]}";
+        ss << "}";
+        write(ss.str());
+
+        points++;
+    }
+
+    for(int i = 0; i < features.size(); i++) {
+        std::stringstream ss;
+        ss << "{";
+        ss << "\"command\" : \"update\",";
+        ss << "\"path\" : \"point_" << i << "\",";
+        ss << "\"transform\" : {";
+        ss << "\"translation\" : [";
+        ss << features[i](0) << ",";
+        ss << features[i](1) << ",";
+        ss << features[i](2) << "]";
+        ss << "}";
+        ss << "}";
+        write(ss.str());
+    }
 }
