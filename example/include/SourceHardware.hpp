@@ -16,7 +16,7 @@ class SourceHardware : public Source {
     void readyCAM(libcamera::Request *request);
 
 public:
-    SourceHardware(Source::Listener *listener);
+    SourceHardware(Source::Listener &listener);
 };
 
 #endif

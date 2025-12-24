@@ -1,9 +1,10 @@
 #include <fcntl.h>
-#include <libcamera/libcamera.h>
-#include <opencv2/opencv.hpp>
 #include <sys/mman.h>
 #include <thread>
 #include <unistd.h>
+
+#include <libcamera/libcamera.h>
+#include <opencv2/opencv.hpp>
 
 #include "SourceHardware.hpp"
 
@@ -14,7 +15,7 @@ struct MPU6050 {
     int16_t accel[3];
 };
 
-SourceHardware::SourceHardware(Source::Listener *listener)
+SourceHardware::SourceHardware(Source::Listener &listener)
     : Source(listener),
       threadIMU(&SourceHardware::readIMU, this),
       threadCAM(&SourceHardware::readCAM, this) {
@@ -22,8 +23,9 @@ SourceHardware::SourceHardware(Source::Listener *listener)
 
 void SourceHardware::readIMU() {
     const int fd = open("/dev/mpu6050", O_RDONLY | O_NONBLOCK);
+
     if(fd < 0) {
-        std::cerr << "Device /dev/mpu6050 not found" << std::endl;
+        std::cerr << "/dev/mpu6050 not found" << std::endl;
         return;
     }
 
@@ -34,8 +36,8 @@ void SourceHardware::readIMU() {
             continue;
         }
 
-        constexpr const float scale_gyro = 0.017453292519943f / 65.5f;
         constexpr const float scale_accel = 9.80665f / 8192.f;
+        constexpr const float scale_gyro = 0.017453292519943f / 65.5f;
 
         const int64_t timestamp = mpu6050.timestamp;
 
@@ -61,7 +63,7 @@ void SourceHardware::readCAM() {
 
     if(cm->cameras().empty()) {
         cm->stop();
-        std::cerr << "No cameras found" << std::endl;
+        std::cerr << "no cameras found" << std::endl;
         return;
     }
 
