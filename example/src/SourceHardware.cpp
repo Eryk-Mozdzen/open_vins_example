@@ -87,22 +87,16 @@ void SourceHardware::readCAM() {
     camera->acquire();
 
     auto config = camera->generateConfiguration({libcamera::StreamRole::Viewfinder});
-    config->at(0).pixelFormat = libcamera::formats::MJPEG;
+    config->at(0).pixelFormat = libcamera::formats::YUV420;
     config->at(0).size.width = 640;
     config->at(0).size.height = 480;
-    config->at(0).bufferCount = 4;
+    config->at(0).bufferCount = 1;
     config->validate();
     camera->configure(config.get());
 
     auto *allocator = new libcamera::FrameBufferAllocator(camera);
     for(auto &cfg : *config) {
-        if(allocator->allocate(cfg.stream()) < 0) {
-            camera->release();
-            camera.reset();
-            cm->stop();
-            std::cerr << "failed to allocate buffers" << std::endl;
-            return;
-        }
+        allocator->allocate(cfg.stream());
     }
 
     camera->start();
@@ -149,7 +143,7 @@ void SourceHardware::readyCAM(libcamera::Request *request) {
     cv::Mat img;
 
     for(auto &[stream, buffer] : request->buffers()) {
-        const auto &plane = buffer->planes()[0];
+        const auto &plane = buffer->planes().front();
 
         void *data = mmap(nullptr, plane.length, PROT_READ, MAP_SHARED, plane.fd.get(), 0);
 
@@ -157,14 +151,7 @@ void SourceHardware::readyCAM(libcamera::Request *request) {
             continue;
         }
 
-        const std::vector<uchar> bytes(static_cast<uchar *>(data),
-                                       static_cast<uchar *>(data) + plane.length);
-
-        const cv::Mat bgr = cv::imdecode(bytes, cv::IMREAD_COLOR);
-
-        if(!bgr.empty()) {
-            cv::cvtColor(bgr, img, cv::COLOR_BGR2GRAY);
-        }
+        cv::Mat(480, 640, CV_8UC1, data).copyTo(img);
 
         munmap(data, plane.length);
     }
