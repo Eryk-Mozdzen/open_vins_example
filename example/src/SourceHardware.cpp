@@ -71,7 +71,7 @@ void SourceHardware::readCAM() {
     camera->acquire();
 
     auto config = camera->generateConfiguration({libcamera::StreamRole::Viewfinder});
-    config->at(0).pixelFormat = libcamera::formats::YUV420;
+    config->at(0).pixelFormat = libcamera::formats::MJPEG;
     config->at(0).size.width = 640;
     config->at(0).size.height = 480;
     config->at(0).bufferCount = 4;
@@ -84,7 +84,7 @@ void SourceHardware::readCAM() {
             camera->release();
             camera.reset();
             cm->stop();
-            std::cerr << "Failed to allocate buffers" << std::endl;
+            std::cerr << "failed to allocate buffers" << std::endl;
             return;
         }
     }
@@ -124,15 +124,25 @@ void SourceHardware::readyCAM(libcamera::Request *request) {
     cv::Mat img;
 
     for(auto &[stream, buffer] : request->buffers()) {
-        const auto &plane = buffer->planes().front();
+        const auto &plane = buffer->planes()[0];
+
         void *data = mmap(nullptr, plane.length, PROT_READ, MAP_SHARED, plane.fd.get(), 0);
 
-        const cv::Mat gray(480, 640, CV_8UC1, data);
+        if(data == MAP_FAILED)
+            continue;
 
-        // my hardware setup consist of camera rotated by 180deg, so I need to rotate image back
-        cv::flip(gray, img, -1);
+        const std::vector<uchar> bytes(static_cast<uchar *>(data),
+                                       static_cast<uchar *>(data) + plane.length);
+
+        const cv::Mat bgr = cv::imdecode(bytes, cv::IMREAD_COLOR);
 
         munmap(data, plane.length);
+
+        if(bgr.empty()) {
+            continue;
+        }
+
+        cv::cvtColor(bgr, img, cv::COLOR_BGR2GRAY);
     }
 
     listener.handle(timestamp, img);

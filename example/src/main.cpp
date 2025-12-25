@@ -25,9 +25,9 @@ int main(int argc, char **argv) {
         std::cerr << "USAGE:   " << argv[0]
                   << " <dataset path> <config path> <visualization server IP>\n"
                   << "EXAMPLE: " << argv[0]
-                  << " datasets/dataset-corridor1_512_16 config/tum/config.yaml   192.168.168.50\n"
+                  << " datasets/dataset-corridor1_512_16 config/tum/config.yaml 192.168.0.17\n"
                   << "         " << argv[0]
-                  << " datasets/MH_01_easy               config/euroc/config.yaml 192.168.168.50"
+                  << " datasets/MH_01_easy               config/eth/config.yaml 192.168.0.17"
                   << std::endl;
         return -1;
     }
@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
 int main(int argc, char **argv) {
     if(argc != 3) {
         std::cerr << "USAGE:   " << argv[0] << " <config path> <visualization server IP>\n"
-                  << "EXAMPLE: " << argv[0] << " config/custom/config.yaml 192.168.168.50"
+                  << "EXAMPLE: " << argv[0] << " config/custom/config.yaml 192.168.0.17"
                   << std::endl;
         return -1;
     }
