@@ -8,7 +8,7 @@
 #include "SourceReplay.hpp"
 
 SourceReplay::SourceReplay(Source::Listener &listener, const std::string path)
-    : Source(listener), path{path} {
+    : Source(listener), path{path}, flag{true} {
 
     {
         std::ifstream file(path + "/mav0/imu0/data.csv");
@@ -38,12 +38,24 @@ SourceReplay::SourceReplay(Source::Listener &listener, const std::string path)
     threadCAM = std::thread(&SourceReplay::readCAM, this);
 }
 
+SourceReplay::~SourceReplay() {
+    flag = false;
+
+    if(threadIMU.joinable()) {
+        threadIMU.join();
+    }
+
+    if(threadCAM.joinable()) {
+        threadCAM.join();
+    }
+}
+
 void SourceReplay::readIMU() {
     std::ifstream file(path + "/mav0/imu0/data.csv");
     std::string line;
     std::getline(file, line);
 
-    while(std::getline(file, line)) {
+    while(std::getline(file, line) && flag) {
         std::stringstream ss(line);
         std::string t, wx, wy, wz, ax, ay, az;
         std::getline(ss, t, ',');
@@ -72,6 +84,8 @@ void SourceReplay::readIMU() {
 
         listener.handle(timestamp, accel, gyro);
     }
+
+    flag = false;
 }
 
 void SourceReplay::readCAM() {
@@ -79,7 +93,7 @@ void SourceReplay::readCAM() {
     std::string line;
     std::getline(file, line);
 
-    while(std::getline(file, line)) {
+    while(std::getline(file, line) && flag) {
         std::stringstream ss(line);
         std::string t, filename;
         std::getline(ss, t, ',');
@@ -96,4 +110,10 @@ void SourceReplay::readCAM() {
 
         listener.handle(timestamp, img);
     }
+
+    flag = false;
+}
+
+bool SourceReplay::available() const {
+    return flag;
 }

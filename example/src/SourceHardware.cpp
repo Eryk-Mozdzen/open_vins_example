@@ -1,3 +1,4 @@
+#include <atomic>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <thread>
@@ -17,8 +18,21 @@ struct MPU6050 {
 
 SourceHardware::SourceHardware(Source::Listener &listener)
     : Source(listener),
+      flag{true},
       threadIMU(&SourceHardware::readIMU, this),
       threadCAM(&SourceHardware::readCAM, this) {
+}
+
+SourceHardware::~SourceHardware() {
+    flag = false;
+
+    if(threadIMU.joinable()) {
+        threadIMU.join();
+    }
+
+    if(threadCAM.joinable()) {
+        threadCAM.join();
+    }
 }
 
 void SourceHardware::readIMU() {
@@ -29,7 +43,7 @@ void SourceHardware::readIMU() {
         return;
     }
 
-    while(true) {
+    while(flag) {
         MPU6050 mpu6050;
         if(read(fd, &mpu6050, sizeof(mpu6050)) != sizeof(mpu6050)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -55,6 +69,8 @@ void SourceHardware::readIMU() {
 
         listener.handle(timestamp, accel, gyro);
     }
+
+    close(fd);
 }
 
 void SourceHardware::readCAM() {
@@ -78,9 +94,9 @@ void SourceHardware::readCAM() {
     config->validate();
     camera->configure(config.get());
 
-    libcamera::FrameBufferAllocator allocator(camera);
+    auto *allocator = new libcamera::FrameBufferAllocator(camera);
     for(auto &cfg : *config) {
-        if(allocator.allocate(cfg.stream()) < 0) {
+        if(allocator->allocate(cfg.stream()) < 0) {
             camera->release();
             camera.reset();
             cm->stop();
@@ -95,7 +111,7 @@ void SourceHardware::readCAM() {
     auto request = camera->createRequest();
     for(auto &streamConfig : *config) {
         auto stream = streamConfig.stream();
-        auto &buffers = allocator.buffers(stream);
+        auto &buffers = allocator->buffers(stream);
         request->addBuffer(stream, buffers[0].get());
     }
 
@@ -108,9 +124,18 @@ void SourceHardware::readCAM() {
 
     camera->queueRequest(request.get());
 
-    while(true) {
+    while(flag) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
+
+    camera->stop();
+    for(auto &cfg : *config) {
+        allocator->free(cfg.stream());
+    }
+    delete allocator;
+    camera->release();
+    camera.reset();
+    cm->stop();
 }
 
 void SourceHardware::readyCAM(libcamera::Request *request) {
@@ -128,25 +153,26 @@ void SourceHardware::readyCAM(libcamera::Request *request) {
 
         void *data = mmap(nullptr, plane.length, PROT_READ, MAP_SHARED, plane.fd.get(), 0);
 
-        if(data == MAP_FAILED)
+        if(data == MAP_FAILED) {
             continue;
+        }
 
         const std::vector<uchar> bytes(static_cast<uchar *>(data),
                                        static_cast<uchar *>(data) + plane.length);
 
         const cv::Mat bgr = cv::imdecode(bytes, cv::IMREAD_COLOR);
 
-        munmap(data, plane.length);
-
-        if(bgr.empty()) {
-            continue;
+        if(!bgr.empty()) {
+            cv::cvtColor(bgr, img, cv::COLOR_BGR2GRAY);
         }
 
-        cv::cvtColor(bgr, img, cv::COLOR_BGR2GRAY);
+        munmap(data, plane.length);
     }
 
     listener.handle(timestamp, img);
 
-    request->reuse(libcamera::Request::ReuseBuffers);
-    camera->queueRequest(request);
+    if(flag) {
+        request->reuse(libcamera::Request::ReuseBuffers);
+        camera->queueRequest(request);
+    }
 }

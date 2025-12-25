@@ -4,7 +4,7 @@
 
 int main(int argc, char **argv) {
     if(argc != 3) {
-        std::cerr << "USAGE:   " << argv[0] << " <dataset path> <duration in seconds>\n"
+        std::cerr << "USAGE:   " << argv[0] << " <dataset path> <duration in seconds>\n\n"
                   << "EXAMPLE: " << argv[0] << " datasets/custom 20" << std::endl;
         return -1;
     }
@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
 int main(int argc, char **argv) {
     if(argc != 4) {
         std::cerr << "USAGE:   " << argv[0]
-                  << " <dataset path> <config path> <visualization server IP>\n"
+                  << " <dataset path> <config path> <visualization server IP>\n\n"
                   << "EXAMPLE: " << argv[0]
                   << " datasets/dataset-corridor1_512_16 config/tum/config.yaml 192.168.0.17\n"
                   << "         " << argv[0]
@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
     SourceReplay source(listener, argv[1]);
     Visualization visualization(argv[3]);
 
-    while(true) {
+    while(source.available()) {
         const cv::Mat image = listener.getImage();
 
         if(!image.empty()) {
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
 
 int main(int argc, char **argv) {
     if(argc != 3) {
-        std::cerr << "USAGE:   " << argv[0] << " <config path> <visualization server IP>\n"
+        std::cerr << "USAGE:   " << argv[0] << " <config path> <visualization server IP>\n\n"
                   << "EXAMPLE: " << argv[0] << " config/custom/config.yaml 192.168.0.17"
                   << std::endl;
         return -1;
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
     SourceHardware source(listener);
     Visualization visualization(argv[2]);
 
-    while(true) {
+    while(source.available()) {
         const Eigen::Vector4d attitude = listener.getAttitude();
         const Eigen::Vector3d position = listener.getPosition();
         const std::vector<Eigen::Vector3d> features = listener.getFeatures();

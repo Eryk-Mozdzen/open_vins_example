@@ -14,7 +14,10 @@ public:
 protected:
     Listener &listener;
 
+public:
     Source(Listener &listener);
+
+    virtual bool available() const;
 };
 
 #endif
