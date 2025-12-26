@@ -113,7 +113,7 @@ cd mpu6050 \
     && sudo insmmod mpu6050.ko
 ```
 
-In 'dmesg' you should have message 'start' without errors.
+In `dmesg` you should have message `start` without errors.
 
 ### VIO apps
 
@@ -124,4 +124,4 @@ cmake ..
 make
 ```
 
-This operation should make three binaries: 'record', 'vio_offline', 'vio_online'.
+This operation should make three binaries: `record`, `vio_offline`, `vio_online`.
